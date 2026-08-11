@@ -1,0 +1,639 @@
+schema_version: 1
+
+policy:
+  mcp_solution_authoring_rationale: >-
+    Generic Dataverse MCP writes do not provide a compiler-validated explicit
+    custom-solution context equivalent to the operation's documented Web API
+    solution mechanism; Dataverse MCP is discovery and targeted post-action
+    verification only for solution-aware authoring.
+  portal_fallback_evidence_required: true
+  destructive_approval_required: true
+  delete_semantics:
+    delete: >-
+      HTTP DELETE removes the metadata component or row from the environment;
+      it is destructive and is never a substitute for removing solution membership.
+    remove_solution_component: >-
+      RemoveSolutionComponent removes only the component's membership from the
+      named unmanaged solution; it does not delete the component from the environment.
+
+official_references:
+  optional_parameters:
+    title: Associate a solution component with a solution
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/optional-parameters#associate-a-solution-component-with-a-solution
+  table_definitions:
+    title: Create and update table definitions using the Web API
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-update-entity-definitions-using-web-api
+  column_definitions:
+    title: Create and update column definitions using the Web API
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-update-column-definitions-using-web-api
+  relationship_definitions:
+    title: Create and update table relationships using the Web API
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-update-entity-relationships-using-web-api
+  choice_definitions:
+    title: Create and update choices using the Web API
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-update-optionsets
+  alternate_keys:
+    title: Work with alternate keys
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/define-alternate-keys-entity
+  alternate_key_web_api_sample:
+    title: Official CreateEntityKeyRequest Web API sample
+    url: https://github.com/microsoft/PowerApps-Samples/blob/master/dataverse/webapi/CSharp-NETx/WebAPIService/Metadata/Messages/CreateEntityKeyRequest.cs
+  entity_key_metadata:
+    title: EntityKeyMetadata Web API type
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/reference/entitykeymetadata
+  environment_variable_definition:
+    title: Environment Variable Definition table reference
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/environmentvariabledefinition
+  environment_variable_value:
+    title: Environment Variable Value table reference
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/environmentvariablevalue
+  connection_reference:
+    title: Connection Reference table reference
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/connectionreference
+  system_form:
+    title: System Form table reference
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/systemform
+  workflow:
+    title: Process Workflow table reference
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/workflow
+  security_role:
+    title: Security Role table reference
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/role
+  add_solution_component:
+    title: AddSolutionComponent action
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/reference/addsolutioncomponent
+  remove_solution_component:
+    title: RemoveSolutionComponent action
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/reference/removesolutioncomponent
+  solution_component_types:
+    title: Solution Component table reference
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/solutioncomponent#componenttype
+  publish_xml:
+    title: PublishXml action
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/reference/publishxml
+  publish_request_schema:
+    title: Publish request schema
+    url: https://learn.microsoft.com/en-us/power-apps/developer/model-driven-apps/publish-request-schema
+  oauth:
+    title: Use OAuth authentication with Microsoft Dataverse
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/authenticate-oauth
+  http:
+    title: Compose HTTP requests and handle errors
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/compose-http-requests-handle-errors
+  azure_cli_token:
+    title: az account get-access-token
+    url: https://learn.microsoft.com/en-us/cli/azure/account#az-account-get-access-token
+  dataverse_rows:
+    title: Create, update, and delete Dataverse rows
+    url: https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/create-entity-web-api
+  maker_solutions:
+    title: Solutions overview
+    url: https://learn.microsoft.com/en-us/power-apps/maker/data-platform/solutions-overview
+  power_platform_cli:
+    title: Microsoft Power Platform CLI
+    url: https://learn.microsoft.com/en-us/power-platform/developer/cli/introduction
+  dataverse_mcp:
+    title: Dataverse Model Context Protocol server
+    url: https://learn.microsoft.com/en-us/power-apps/maker/data-platform/data-platform-mcp
+  audit_administration:
+    title: Manage Dataverse auditing
+    url: https://learn.microsoft.com/en-us/power-platform/admin/manage-dataverse-auditing
+  copilot_studio:
+    title: Microsoft Copilot Studio documentation
+    url: https://learn.microsoft.com/en-us/microsoft-copilot-studio/
+  azure_resource_manager:
+    title: Azure Resource Manager overview
+    url: https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/overview
+  power_bi_rest:
+    title: Power BI REST APIs
+    url: https://learn.microsoft.com/en-us/rest/api/power-bi/
+
+profiles:
+  metadata-table-create:
+    support: supported
+    operation: create
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: metadata, path_template: EntityDefinitions}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{identity}')"}, rationale: Target-read the exact logical name and verify routed-solution membership.}
+    fallback: &portal_fallback {resource: maker-portal, allowed_when: documented_operation_unsupported_or_primary_unavailable, issue_evidence_required: true}
+    executor: {supported: true, builder: schema_table}
+    rationale: &mcp_rationale Generic MCP writes do not guarantee the documented explicit custom-solution header; Web API is compiler-bound and MCP is verification-only.
+    official_references: [optional_parameters, table_definitions, http]
+  metadata-table-update:
+    support: supported
+    operation: update
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{identity}')"}, rationale: Verify only the exact existing table and child columns added by the compiler-owned extension payload.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_table}
+    rationale: A schema_table update is a compiler-owned extension of an existing table; every declared child column uses the documented solution header and MCP remains verification-only.
+    official_references: [optional_parameters, table_definitions, column_definitions, publish_xml]
+  metadata-table-delete:
+    support: supported
+    operation: delete
+    primary_resource: dataverse-web-api
+    http: {method: DELETE, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{identity}')"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{identity}')"}, rationale: Confirm the exact table no longer exists; do not infer another identity.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_table}
+    destructive_effect: environment_delete
+    rationale: HTTP DELETE destroys the table in the environment; it is never substituted for RemoveSolutionComponent.
+    official_references: [optional_parameters, table_definitions]
+  metadata-table-verify:
+    support: supported
+    operation: verify
+    primary_resource: dataverse-web-api
+    http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{identity}')"}
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{identity}')"}, rationale: Read the canonical table identity and exact expected fields only.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: true, builder: schema_table}
+    rationale: Web API or MCP targeted reads verify the result without solution export or unpack.
+    official_references: [table_definitions]
+  metadata-column-create:
+    support: supported
+    operation: create
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes(LogicalName='{identity}')"}, rationale: Verify the exact table and column logical names.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_column}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, column_definitions]
+  metadata-column-update:
+    support: supported
+    operation: update
+    primary_resource: dataverse-web-api
+    http: {method: PUT, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes(LogicalName='{identity}')"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes(LogicalName='{identity}')"}, rationale: "Retrieve, merge, replace, publish, and verify the exact column definition."}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_column}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, column_definitions, publish_xml]
+  metadata-column-delete:
+    support: supported
+    operation: delete
+    primary_resource: dataverse-web-api
+    http: {method: DELETE, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes(LogicalName='{identity}')"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes(LogicalName='{identity}')"}, rationale: Confirm only the canonical column was removed.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_column}
+    destructive_effect: environment_delete
+    rationale: HTTP DELETE destroys the column in the environment and never means solution-membership removal.
+    official_references: [optional_parameters, column_definitions]
+  metadata-column-verify:
+    support: supported
+    operation: verify
+    primary_resource: dataverse-web-api
+    http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes(LogicalName='{identity}')"}
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Attributes(LogicalName='{identity}')"}, rationale: Target-read the exact column.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: true, builder: schema_column}
+    rationale: Targeted verification avoids broad table or solution inventory.
+    official_references: [column_definitions]
+  metadata-relationship-create:
+    support: supported
+    operation: create
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: metadata, path_template: RelationshipDefinitions}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "RelationshipDefinitions(SchemaName='{identity}')"}, rationale: Verify the exact relationship schema name.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_relationship}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, relationship_definitions]
+  metadata-relationship-update:
+    support: supported
+    operation: update
+    primary_resource: dataverse-web-api
+    http: {method: PUT, endpoint_family: metadata, path_template: "RelationshipDefinitions(MetadataId='{metadata_id}')"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "RelationshipDefinitions(SchemaName='{identity}')"}, rationale: Retrieve and replace the one exact relationship definition.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_relationship}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, relationship_definitions, publish_xml]
+  metadata-relationship-delete:
+    support: supported
+    operation: delete
+    primary_resource: dataverse-web-api
+    http: {method: DELETE, endpoint_family: metadata, path_template: "RelationshipDefinitions(MetadataId='{metadata_id}')"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "RelationshipDefinitions(SchemaName='{identity}')"}, rationale: Confirm the exact relationship no longer exists.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_relationship}
+    destructive_effect: environment_delete
+    rationale: HTTP DELETE destroys the relationship in the environment and never removes only solution membership.
+    official_references: [optional_parameters, relationship_definitions]
+  metadata-relationship-verify:
+    support: supported
+    operation: verify
+    primary_resource: dataverse-web-api
+    http: {method: GET, endpoint_family: metadata, path_template: "RelationshipDefinitions(SchemaName='{identity}')"}
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "RelationshipDefinitions(SchemaName='{identity}')"}, rationale: Target-read the exact relationship.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: true, builder: schema_relationship}
+    rationale: Targeted verification avoids broad metadata discovery.
+    official_references: [relationship_definitions]
+  metadata-choice-create:
+    support: supported
+    operation: create
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: metadata, path_template: GlobalOptionSetDefinitions}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "GlobalOptionSetDefinitions(Name='{identity}')"}, rationale: Verify the exact global choice name and values.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_choice}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, choice_definitions]
+  metadata-choice-update:
+    support: supported
+    operation: update
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: unbound_action, path_template: UpdateOptionValue}
+    solution_context: {mechanism: action_parameter, name: SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "GlobalOptionSetDefinitions(Name='{identity}')"}, rationale: Verify the exact global choice values after action calls.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_choice}
+    rationale: *mcp_rationale
+    official_references: [choice_definitions]
+  metadata-choice-delete:
+    support: supported
+    operation: delete
+    primary_resource: dataverse-web-api
+    http: {method: DELETE, endpoint_family: metadata, path_template: "GlobalOptionSetDefinitions(Name='{identity}')"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "GlobalOptionSetDefinitions(Name='{identity}')"}, rationale: Confirm the exact global choice no longer exists.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_choice}
+    destructive_effect: environment_delete
+    rationale: HTTP DELETE destroys the global choice and never removes only solution membership.
+    official_references: [optional_parameters, choice_definitions]
+  metadata-choice-verify:
+    support: supported
+    operation: verify
+    primary_resource: dataverse-web-api
+    http: {method: GET, endpoint_family: metadata, path_template: "GlobalOptionSetDefinitions(Name='{identity}')"}
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "GlobalOptionSetDefinitions(Name='{identity}')"}, rationale: Target-read the exact global choice.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: true, builder: schema_choice}
+    rationale: Targeted verification avoids broad metadata discovery.
+    official_references: [choice_definitions]
+  metadata-key-create:
+    support: supported
+    operation: create
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Keys"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Keys"}, rationale: "Verify the exact key schema name, columns, and index status."}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_key}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, alternate_keys, alternate_key_web_api_sample, entity_key_metadata]
+  metadata-key-delete:
+    support: supported
+    operation: delete
+    primary_resource: dataverse-web-api
+    http: {method: DELETE, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Keys(LogicalName='{identity}')"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Keys"}, rationale: Confirm the exact key no longer exists.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: schema_key}
+    destructive_effect: environment_delete
+    rationale: HTTP DELETE destroys the alternate key and never removes only solution membership.
+    official_references: [optional_parameters, alternate_keys, entity_key_metadata]
+  metadata-key-verify:
+    support: supported
+    operation: verify
+    primary_resource: dataverse-web-api
+    http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Keys"}
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: metadata, path_template: "EntityDefinitions(LogicalName='{table}')/Keys"}, rationale: Target-read only the containing table's key collection and match the canonical key name.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: true, builder: schema_key}
+    rationale: Targeted verification checks asynchronous key activation without broad discovery.
+    official_references: [alternate_keys]
+  metadata-key-update-unsupported:
+    support: unsupported_or_not_applicable
+    operation: update
+    primary_resource: maker-portal
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Verify the replacement key only after an explicitly approved delete and create sequence.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: Microsoft documents create and delete semantics for alternate keys; update is not treated as an in-place reliable operation and delete/create is never substituted automatically.
+    official_references: [alternate_keys]
+  environment-variable-create:
+    support: supported
+    operation: create
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: entity_set, path_template: environmentvariabledefinitions}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: entity_set, path_template: environmentvariabledefinitions}, rationale: Query only the exact schema name and never expose a current or secret value.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: config_env_variable}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, environment_variable_definition, environment_variable_value]
+  environment-variable-update:
+    support: supported
+    operation: update
+    primary_resource: dataverse-web-api
+    http: {method: PATCH, endpoint_family: entity_set, path_template: "environmentvariabledefinitions({record_id})"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: entity_set, path_template: environmentvariabledefinitions}, rationale: Verify definition metadata by exact schema name without returning values.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: config_env_variable}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, environment_variable_definition]
+  environment-variable-delete:
+    support: supported
+    operation: delete
+    primary_resource: dataverse-web-api
+    http: {method: DELETE, endpoint_family: entity_set, path_template: "environmentvariabledefinitions({record_id})"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: entity_set, path_template: environmentvariabledefinitions}, rationale: Confirm the exact definition no longer exists without reading values.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: config_env_variable}
+    destructive_effect: environment_delete
+    rationale: HTTP DELETE destroys the definition and associated behavior in the environment; it is not membership removal.
+    official_references: [optional_parameters, environment_variable_definition]
+  environment-variable-verify:
+    support: supported
+    operation: verify
+    primary_resource: dataverse-web-api
+    http: {method: GET, endpoint_family: entity_set, path_template: environmentvariabledefinitions}
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: entity_set, path_template: environmentvariabledefinitions}, rationale: Read definition field names and status only; withhold all values.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: true, builder: config_env_variable}
+    rationale: Targeted verification is safe when values and raw bodies are never logged.
+    official_references: [environment_variable_definition, environment_variable_value]
+  connection-reference-create:
+    support: supported
+    operation: create
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: entity_set, path_template: connectionreferences}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: entity_set, path_template: connectionreferences}, rationale: Query the exact connection-reference logical name without inspecting connection secrets.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: integ_connection_ref}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, connection_reference]
+  connection-reference-update:
+    support: supported
+    operation: update
+    primary_resource: dataverse-web-api
+    http: {method: PATCH, endpoint_family: entity_set, path_template: "connectionreferences({record_id})"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: entity_set, path_template: connectionreferences}, rationale: "Verify logical name, connector identity, and non-secret metadata only."}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: integ_connection_ref}
+    rationale: *mcp_rationale
+    official_references: [optional_parameters, connection_reference]
+  connection-reference-delete:
+    support: supported
+    operation: delete
+    primary_resource: dataverse-web-api
+    http: {method: DELETE, endpoint_family: entity_set, path_template: "connectionreferences({record_id})"}
+    solution_context: {mechanism: MSCRM.SolutionUniqueName, name: MSCRM.SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: entity_set, path_template: connectionreferences}, rationale: Confirm only the exact logical name was removed.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: integ_connection_ref}
+    destructive_effect: environment_delete
+    rationale: HTTP DELETE destroys the connection-reference row and can break consumers; it is not membership removal.
+    official_references: [optional_parameters, connection_reference]
+  connection-reference-verify:
+    support: supported
+    operation: verify
+    primary_resource: dataverse-web-api
+    http: {method: GET, endpoint_family: entity_set, path_template: connectionreferences}
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], http: {method: GET, endpoint_family: entity_set, path_template: connectionreferences}, rationale: Target-read the exact logical name and non-secret connector metadata.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: true, builder: integ_connection_ref}
+    rationale: Targeted verification does not inspect or bind a concrete connection.
+    official_references: [connection_reference]
+  metadata-publish:
+    support: supported
+    operation: publish
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: unbound_action, path_template: PublishXml}
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Re-read only the published canonical metadata.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: publish_xml}
+    rationale: PublishXml targets named entities or choices; PublishAllXml is prohibited.
+    official_references: [publish_xml, publish_request_schema]
+  add-solution-component:
+    support: supported
+    operation: add_solution_component
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: unbound_action, path_template: AddSolutionComponent}
+    solution_context: {mechanism: action_parameter, name: SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Verify the exact object ID is a member of only the routed custom solution among declared custom solutions.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: add_solution_component}
+    rationale: Use only for an already-existing component; creation with MSCRM.SolutionUniqueName remains the preferred documented mechanism.
+    official_references: [add_solution_component, solution_component_types]
+  remove-solution-component:
+    support: supported
+    operation: remove_solution_component
+    primary_resource: dataverse-web-api
+    http: {method: POST, endpoint_family: unbound_action, path_template: RemoveSolutionComponent}
+    solution_context: {mechanism: action_parameter, name: SolutionUniqueName, value_source: authoring_target.solution_unique_name}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Verify the component still exists but is no longer a member of the routed solution.}
+    fallback: *portal_fallback
+    executor: {supported: true, builder: remove_solution_component}
+    destructive_effect: solution_membership_only
+    rationale: RemoveSolutionComponent changes membership only and must never be substituted for HTTP DELETE.
+    official_references: [remove_solution_component, solution_component_types]
+  maker-portal-primary:
+    support: unsupported_or_not_applicable
+    operation: any
+    primary_resource: maker-portal
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Use targeted Dataverse reads after the human authoring step.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: No documented compiler-reliable Web API payload contract is claimed for this component; the visual product authoring surface remains primary.
+    official_references: [maker_solutions]
+  documented-form-not-reliable:
+    support: documented_but_not_compiler_reliable
+    operation: any
+    primary_resource: maker-portal
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Verify exact form metadata after portal authoring.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: SystemForm CRUD is documented, but the current required payload cannot safely construct or merge complete FormXml/FormJson and role/order dependencies.
+    official_references: [system_form, optional_parameters]
+  documented-flow-not-reliable:
+    support: documented_but_not_compiler_reliable
+    operation: any
+    primary_resource: maker-portal
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Verify the exact workflow identity and runtime outcome after supported visual authoring.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: Workflow row CRUD is documented, but Microsoft does not document the complete cloud-flow clientdata construction contract required for safe compiler authoring.
+    official_references: [workflow, optional_parameters]
+  documented-role-not-reliable:
+    support: documented_but_not_compiler_reliable
+    operation: any
+    primary_resource: maker-portal
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Verify the exact role and effective privileges after human least-privilege review.}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: Role CRUD and privilege actions are documented, but canonical role identity, base-role copy, business-unit scoping, and privilege resolution are not safely derivable from the current payload.
+    official_references: [security_role, optional_parameters]
+  pac-primary:
+    support: unsupported_or_not_applicable
+    operation: any
+    primary_resource: power-platform-cli
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: "Use targeted Dataverse verification after supported PAC source, package, or registration operations."}
+    fallback: {resource: maker-portal, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: PAC remains primary only for its documented source, package, registration, and solution operations; generic component creation is not claimed.
+    official_references: [power_platform_cli]
+  mcp-environment-primary:
+    support: unsupported_or_not_applicable
+    operation: any
+    primary_resource: dataverse-mcp
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Environment-bound records do not require custom-solution context.}
+    fallback: {resource: maker-portal, allowed_when: documented_operation_unsupported_or_primary_unavailable, issue_evidence_required: true}
+    executor: {supported: false, builder: unsupported}
+    rationale: This component is environment-bound rather than solution-bound, so the explicit custom-solution Web API routing rule does not apply.
+    official_references: [dataverse_rows, dataverse_mcp]
+  admin-center-primary:
+    support: unsupported_or_not_applicable
+    operation: any
+    primary_resource: power-platform-admin-center
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Verify only the configured audit scope after the administrator action.}
+    fallback: {resource: power-platform-admin-center, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: Environment audit administration is not a custom-solution authoring operation.
+    official_references: [audit_administration]
+  copilot-studio-primary:
+    support: unsupported_or_not_applicable
+    operation: any
+    primary_resource: copilot-studio-authoring
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: dataverse-mcp, tools: [describe, read_query], rationale: Use targeted Dataverse grounding and published-agent verification only.}
+    fallback: {resource: copilot-studio-authoring, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: Copilot Studio artifacts require the registered product-specific authoring resource; no generic Dataverse Web API authoring claim is made.
+    official_references: [copilot_studio]
+  repository-native:
+    support: unsupported_or_not_applicable
+    operation: any
+    primary_resource: repository
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: repository, rationale: Use the component's native repository build and validation tools.}
+    fallback: {resource: repository, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: The component is repository-only and outside Dataverse Web API routing.
+    official_references: [azure_resource_manager]
+  power-bi-native:
+    support: unsupported_or_not_applicable
+    operation: any
+    primary_resource: power-bi-rest-api
+    solution_context: {mechanism: not_applicable}
+    verification: {resource: power-bi-rest-api, rationale: Verify through the registered Power BI resources.}
+    fallback: {resource: power-bi-rest-api, allowed_when: not_applicable, issue_evidence_required: false}
+    executor: {supported: false, builder: unsupported}
+    rationale: The component is a Power BI artifact and outside Dataverse Web API routing.
+    official_references: [power_bi_rest]
+
+components:
+  schema_table:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: metadata-table-create, update: metadata-table-update, delete: metadata-table-delete, verify: metadata-table-verify, publish: metadata-publish, add_solution_component: add-solution-component, remove_solution_component: remove-solution-component}
+  schema_column:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: metadata-column-create, update: metadata-column-update, delete: metadata-column-delete, verify: metadata-column-verify, publish: metadata-publish, add_solution_component: add-solution-component, remove_solution_component: remove-solution-component}
+  schema_relationship:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: metadata-relationship-create, update: metadata-relationship-update, delete: metadata-relationship-delete, verify: metadata-relationship-verify, publish: metadata-publish, add_solution_component: add-solution-component, remove_solution_component: remove-solution-component}
+  schema_choice:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: metadata-choice-create, update: metadata-choice-update, delete: metadata-choice-delete, verify: metadata-choice-verify, publish: metadata-publish, add_solution_component: add-solution-component, remove_solution_component: remove-solution-component}
+  schema_key:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: metadata-key-create, update: metadata-key-update-unsupported, delete: metadata-key-delete, verify: metadata-key-verify, add_solution_component: add-solution-component, remove_solution_component: remove-solution-component}
+  config_sla: &maker_component
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: maker-portal-primary, update: maker-portal-primary, delete: maker-portal-primary, verify: maker-portal-primary}
+  config_arc: *maker_component
+  config_bpf: *maker_component
+  config_business_rule: *maker_component
+  config_routing_rule: *maker_component
+  config_queue: &environment_component
+    implementation_scope: repository_and_dataverse_environment
+    operations: {create: mcp-environment-primary, update: mcp-environment-primary, delete: mcp-environment-primary, verify: mcp-environment-primary}
+  config_assignment_rule: *maker_component
+  config_dup_detection: *maker_component
+  config_env_variable:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: environment-variable-create, update: environment-variable-update, delete: environment-variable-delete, verify: environment-variable-verify, add_solution_component: add-solution-component, remove_solution_component: remove-solution-component}
+  config_audit:
+    implementation_scope: repository_and_dataverse_environment
+    operations: {create: admin-center-primary, update: admin-center-primary, delete: admin-center-primary, verify: admin-center-primary}
+  config_ai_*: &copilot_component
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: copilot-studio-primary, update: copilot-studio-primary, delete: copilot-studio-primary, verify: copilot-studio-primary}
+  uiux_form:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: documented-form-not-reliable, update: documented-form-not-reliable, delete: documented-form-not-reliable, verify: documented-form-not-reliable}
+  uiux_view: *maker_component
+  uiux_dashboard: *maker_component
+  uiux_chart: *maker_component
+  uiux_sitemap: *maker_component
+  uiux_app: *maker_component
+  flow_cloud:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: documented-flow-not-reliable, update: documented-flow-not-reliable, delete: documented-flow-not-reliable, verify: documented-flow-not-reliable}
+  code_plugin: &pac_component
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: pac-primary, update: pac-primary, delete: pac-primary, verify: pac-primary}
+  code_custom_api: *pac_component
+  code_pcf: *pac_component
+  code_webres_*: *pac_component
+  mcs_*: *copilot_component
+  sec_role:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: documented-role-not-reliable, update: documented-role-not-reliable, delete: documented-role-not-reliable, verify: documented-role-not-reliable}
+  sec_field_profile: *maker_component
+  sec_business_unit: *environment_component
+  sec_team: *environment_component
+  az_apim: &repository_component
+    implementation_scope: repository_only
+    operations: {create: repository-native, update: repository-native, delete: repository-native, verify: repository-native}
+  az_service_bus: *repository_component
+  az_key_vault: *repository_component
+  az_function_app: *repository_component
+  az_func_scheduled: *repository_component
+  az_app_insights: *repository_component
+  az_event_grid: *repository_component
+  az_ai_*: *repository_component
+  bi_dataset: &power_bi_component
+    implementation_scope: repository_only
+    operations: {create: power-bi-native, update: power-bi-native, delete: power-bi-native, verify: power-bi-native}
+  bi_report: *power_bi_component
+  integ_connector: *pac_component
+  integ_connection_ref:
+    implementation_scope: repository_and_dataverse_solution
+    operations: {create: connection-reference-create, update: connection-reference-update, delete: connection-reference-delete, verify: connection-reference-verify, add_solution_component: add-solution-component, remove_solution_component: remove-solution-component}

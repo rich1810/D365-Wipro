@@ -1,0 +1,805 @@
+schema_version: 1
+authentication_policy: reuse_if_valid
+capability_contract:
+  path: .d365/dataverse-web-api-capabilities.yml
+  schema_path: .d365/dataverse-web-api-capabilities.schema.json
+
+resources:
+  microsoft-learn:
+    kind: mcp
+    version: service-managed
+    version_policy: service_managed
+    authentication: none
+    supported_execution_hosts: [local_interactive, github_copilot_cloud]
+    server: microsoft-learn
+    description: Official Microsoft implementation grounding.
+    preflight:
+      installation:
+        policy: not_applicable
+        guidance: Configure the official Microsoft Learn MCP endpoint in the active MCP client.
+      steps:
+        - id: server-registration
+          phase: availability_version
+          action: mcp_server
+          behavior: automatic
+          description: Verify the exact MCP server key is registered and reachable.
+        - id: documentation-search
+          phase: capability
+          action: mcp_tools
+          behavior: automatic
+          description: Probe the server tool surface before implementation grounding.
+  dataverse-mcp:
+    kind: mcp
+    version: ga
+    version_policy: service_managed
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    server: dataverse-authoring
+    endpoint: "{authoring_target.environment_url}/api/mcp"
+    release_channel: ga
+    tools: [search_data, search, create_record, update_record, delete_record, create_table, update_table, delete_table, read_query, describe, upsert_skill, delete_skill, init_file_upload, commit_file_upload, file_download]
+    description: GA Dataverse MCP endpoint; tool surface is probed at runtime.
+    preflight:
+      installation:
+        policy: not_applicable
+        guidance: Enable Dataverse MCP in the declared environment and register its GA endpoint in the active MCP client.
+      steps:
+        - id: server-registration
+          phase: availability_version
+          action: mcp_server
+          behavior: automatic
+          description: Verify the configured server key and resolved GA endpoint.
+        - id: required-tools
+          phase: capability
+          action: mcp_tools
+          behavior: automatic
+          description: Verify every task-routed Dataverse MCP tool is exposed.
+        - id: interactive-sign-in
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Authenticate the current human directly to the declared Dataverse environment.
+          instructions: Complete the MCP browser or device sign-in and return only non-secret identity results.
+          session_probe:
+            instructions: In the active MCP host, inspect the dataverse-authoring connection and confirm the signed-in user and declared environment without reconnecting.
+          fresh_authentication:
+            force_supported: false
+            instructions: In the active MCP host, disconnect or sign out only the dataverse-authoring connection, reconnect the declared /api/mcp endpoint, and complete browser or device sign-in before resuming.
+  dataverse-web-api:
+    kind: endpoint
+    version: v9.2
+    version_policy: api_contract
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    endpoint: "{authoring_target.environment_url}/api/data/v9.2"
+    description: Capability-gated Dataverse Web API authoring endpoint.
+    oauth_public_client:
+      provider: msal_public_client
+      client_id: CONFIGURE_BEFORE_IMPLEMENTATION
+      tenant_id: CONFIGURE_BEFORE_IMPLEMENTATION
+      redirect_uri: http://localhost
+      scope_suffix: /user_impersonation
+      token_cache: memory_only
+    preflight:
+      installation:
+        policy: not_applicable
+        guidance: No local install is required; use the declared Dataverse v9.2 service root.
+      steps:
+        - id: service-root
+          phase: availability_version
+          action: endpoint
+          behavior: automatic
+          description: Validate the resolved HTTPS v9.2 endpoint and API contract.
+        - id: api-capability
+          phase: capability
+          action: endpoint
+          behavior: automatic
+          description: Confirm the compiler-selected component operation is explicitly supported by the capability matrix.
+        - id: interactive-sign-in
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Acquire delegated access for the current human with the configured public-client MSAL registration.
+          instructions: Complete interactive OAuth for <environment-url>/user_impersonation; the token cache is memory-only and no token or authentication output is persisted.
+          session_probe:
+            instructions: Use only an in-process silent MSAL lookup to confirm the current user and exact Dataverse resource; never print token data.
+          fresh_authentication:
+            force_supported: false
+            instructions: Start a new in-memory MSAL public-client session with account selection against the exact Dataverse scope.
+  msal-python:
+    kind: sdk
+    version: 1.37.0
+    version_policy: project_pinned
+    authentication: none
+    supported_execution_hosts: [local_interactive]
+    ecosystem: pip
+    package: msal
+    description: Pinned Microsoft Authentication Library for delegated public-client Dataverse authentication.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Install exactly msal==1.37.0 in the Python environment used by scripts/dataverse_web_api_executor.py.
+      steps:
+        - id: msal-version
+          phase: availability_version
+          action: command
+          behavior: automatic
+          command: [python, -c, "import importlib.metadata; print(importlib.metadata.version('msal'))"]
+          expected: "{resource.version}"
+          description: Require the exact pinned MSAL Python package without exposing token-cache data.
+  power-platform-cli:
+    kind: cli
+    version: 2.9.3
+    version_policy: project_pinned
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    command: pac
+    description: Power Platform CLI for solution source and supported authoring.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Install the project-approved Microsoft.PowerApps.CLI.Tool 2.9.3 package or an equivalent official PAC distribution.
+      steps:
+        - id: pac-version
+          phase: availability_version
+          action: command
+          behavior: automatic
+          command: [pac]
+          expected: "{resource.version}"
+          description: Run bare pac because PAC 2.9.3 reports its version and exits successfully, while pac --version is rejected by its command parser; require the exact pinned version.
+        - id: dataverse-auth
+          phase: authentication
+          action: command
+          behavior: interactive
+          command: [pac, auth, create, --environment, "{authoring_target.environment_url}"]
+          description: Launch PAC interactive authentication directly against the declared environment.
+          instructions: Finish browser sign-in, then resume and verify the connected URL and organization ID.
+          session_probe:
+            command: [pac, org, who]
+            instructions: Verify that the active PAC session resolves to the declared environment before reuse.
+          fresh_authentication:
+            force_supported: true
+            instructions: Run the approved pac auth create command and complete a new browser sign-in for the declared environment.
+  maker-portal:
+    kind: portal
+    version: service-managed
+    version_policy: service_managed
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    endpoint: https://make.powerapps.com
+    description: Human maker authoring surface.
+    preflight:
+      installation:
+        policy: not_applicable
+        guidance: Use a supported browser; no local package is installed.
+      steps:
+        - id: portal-root
+          phase: availability_version
+          action: endpoint
+          behavior: automatic
+          description: Validate the official Maker portal HTTPS root.
+        - id: maker-sign-in
+          phase: authentication
+          action: portal
+          behavior: interactive
+          description: Sign in as the current human and select the declared environment.
+          instructions: Complete browser sign-in and verify the environment selector before continuing.
+          session_probe:
+            instructions: Confirm the current Maker portal user and environment selector before reusing the browser session.
+          fresh_authentication:
+            force_supported: false
+            instructions: Sign out only the current Maker portal account or open a new private browser session, sign in interactively, and select the declared environment before resuming.
+        - id: maker-action
+          phase: manual
+          action: portal
+          behavior: manual
+          description: Perform only the DEV-approved visual authoring or review step.
+          instructions: Record non-secret evidence and return control to the implementation workflow.
+  power-platform-admin-center:
+    kind: portal
+    version: service-managed
+    version_policy: service_managed
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    endpoint: https://admin.powerplatform.microsoft.com
+    description: Human environment administration surface.
+    preflight:
+      installation:
+        policy: not_applicable
+        guidance: Use a supported browser; no local package is installed.
+      steps:
+        - id: portal-root
+          phase: availability_version
+          action: endpoint
+          behavior: automatic
+          description: Validate the official Power Platform admin center HTTPS root.
+        - id: administrator-sign-in
+          phase: authentication
+          action: portal
+          behavior: interactive
+          description: Sign in as the current human with the required environment role.
+          instructions: Complete browser sign-in and verify the declared environment before continuing.
+          session_probe:
+            instructions: Confirm the current Power Platform admin center user, tenant, environment, and required role before reusing the browser session.
+          fresh_authentication:
+            force_supported: false
+            instructions: Sign out only the current admin-center account or open a new private browser session, sign in interactively, and select the declared environment before resuming.
+        - id: administrator-action
+          phase: manual
+          action: portal
+          behavior: manual
+          description: Perform only the explicit environment administration checkpoint.
+          instructions: Record the human outcome without credentials or session data.
+  power-automate-api:
+    kind: endpoint
+    version: v9.2
+    version_policy: api_contract
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    endpoint: "{authoring_target.environment_url}/api/data/v9.2"
+    description: Dataverse Web API contract for solution-aware cloud-flow management.
+    preflight:
+      installation:
+        policy: not_applicable
+        guidance: No separate SDK is installed; solution-aware flow operations use the Dataverse v9.2 workflow table.
+      steps:
+        - id: workflow-service-root
+          phase: availability_version
+          action: endpoint
+          behavior: automatic
+          description: Validate the resolved Dataverse v9.2 service root.
+        - id: workflow-capability
+          phase: capability
+          action: endpoint
+          behavior: automatic
+          description: Verify solution-aware workflow table operations are available.
+        - id: interactive-sign-in
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Acquire delegated access for the current human against the declared URL.
+          instructions: Complete interactive OAuth and retain no token or auth-profile output.
+          session_probe:
+            instructions: Use the active flow-management client to confirm the current signed-in user and declared Dataverse environment without reconnecting.
+          fresh_authentication:
+            force_supported: false
+            instructions: Disconnect only the selected flow-management connection, reconnect directly to the declared Dataverse service root, and complete a new interactive OAuth sign-in before resuming.
+  dotnet-toolchain:
+    kind: sdk
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: none
+    supported_execution_hosts: [local_interactive, github_copilot_cloud]
+    ecosystem: dotnet
+    description: Project-supported .NET build and test toolchain.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Install the exact SDK pinned by global.json from the official .NET distribution.
+      steps:
+        - id: dotnet-version
+          phase: availability_version
+          action: command
+          behavior: automatic
+          command: [dotnet, --version]
+          expected: "{resource.version}"
+          description: Require the exact project-pinned .NET SDK version.
+  dataverse-dotnet-sdk:
+    kind: sdk
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    ecosystem: nuget
+    package: Microsoft.PowerPlatform.Dataverse.Client
+    description: Dataverse .NET SDK pinned in the project manifest.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Add the exact Microsoft.PowerPlatform.Dataverse.Client version to the project manifest and lock file.
+      steps:
+        - id: package-version
+          phase: availability_version
+          action: package
+          behavior: automatic
+          expected: "{resource.version}"
+          description: Verify the exact resolved NuGet package version in the consuming project.
+        - id: delegated-auth
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Use the SDK's supported interactive user authentication against the declared URL.
+          instructions: Complete interactive sign-in and do not persist connection strings or tokens.
+          session_probe:
+            instructions: Use the consuming application to report the current non-secret Dataverse user and organization identity before reusing its delegated session.
+          fresh_authentication:
+            force_supported: false
+            instructions: Close only the selected SDK connection, launch the SDK's interactive user flow again for the declared URL, and complete a new sign-in before resuming.
+  node-toolchain:
+    kind: sdk
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: none
+    supported_execution_hosts: [local_interactive, github_copilot_cloud]
+    ecosystem: npm
+    package: node
+    description: Project-pinned Node.js and npm toolchain.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Install the exact project-approved Node.js release and retain the repository version file and npm lockfile.
+      steps:
+        - id: node-version
+          phase: availability_version
+          action: command
+          behavior: automatic
+          command: [node, --version]
+          expected: "{resource.version}"
+          description: Require the exact project-pinned Node.js version.
+  copilot-studio-authoring:
+    kind: mcp
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    server: copilot-studio
+    endpoint: CONFIGURE_BEFORE_IMPLEMENTATION
+    description: Customer-provided Copilot Studio authoring MCP; Microsoft does not publish a generic authoring server.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Register a customer-approved Copilot Studio authoring MCP and exact tested version; no generic Microsoft authoring server exists.
+      steps:
+        - id: server-registration
+          phase: availability_version
+          action: mcp_server
+          behavior: automatic
+          description: Verify the approved MCP server key, endpoint, and exact project version.
+        - id: required-tools
+          phase: capability
+          action: mcp_tools
+          behavior: automatic
+          description: Verify every task-routed Copilot Studio authoring tool is exposed.
+        - id: interactive-sign-in
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Authenticate the current human through the approved MCP flow.
+          instructions: Complete browser or device sign-in without storing credentials or auth profiles.
+          session_probe:
+            instructions: In the active MCP host, inspect the configured Copilot Studio connection and confirm the signed-in user and target environment without reconnecting.
+          fresh_authentication:
+            force_supported: false
+            instructions: In the active MCP host, disconnect or sign out only the configured Copilot Studio connection, reconnect its declared endpoint, and complete browser or device sign-in before resuming.
+  azure-cli:
+    kind: cli
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    command: az
+    description: Project-tested Azure CLI.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Install the exact project-approved Azure CLI release using an official Microsoft distribution.
+      steps:
+        - id: azure-cli-version
+          phase: availability_version
+          action: command
+          behavior: automatic
+          command: [az, version]
+          expected: "{resource.version}"
+          description: Require the exact project-tested Azure CLI version.
+        - id: azure-sign-in
+          phase: authentication
+          action: command
+          behavior: interactive
+          command: [az, login]
+          description: Launch interactive Azure authentication for the current human.
+          instructions: Complete browser sign-in and verify the approved subscription without storing account output.
+          session_probe:
+            command: [az, account, show]
+            instructions: Verify the current Azure CLI account, tenant, and approved subscription before reuse.
+          fresh_authentication:
+            force_supported: true
+            instructions: Run the approved az login command and complete a new browser sign-in, then reselect and verify the approved subscription.
+  bicep-cli:
+    kind: cli
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: none
+    supported_execution_hosts: [local_interactive, github_copilot_cloud]
+    command: bicep
+    description: Project-tested Bicep CLI.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Install the exact standalone Bicep CLI release so bicep is available on PATH; az bicep does not satisfy this resource.
+      steps:
+        - id: bicep-version
+          phase: availability_version
+          action: command
+          behavior: automatic
+          command: [bicep, --version]
+          expected: "{resource.version}"
+          description: Require the exact standalone Bicep CLI version.
+  azure-resource-manager:
+    kind: endpoint
+    version: exact-stable-per-resource
+    version_policy: api_contract
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    endpoint: https://management.azure.com
+    description: Azure Resource Manager with exact stable API versions in DEV payloads.
+    preflight:
+      installation:
+        policy: not_applicable
+        guidance: No local SDK is required; use the ARM service root and exact stable per-resource API versions.
+      steps:
+        - id: arm-root
+          phase: availability_version
+          action: endpoint
+          behavior: automatic
+          description: Validate the official ARM HTTPS service root.
+        - id: resource-api
+          phase: capability
+          action: endpoint
+          behavior: automatic
+          description: Verify the exact stable API version declared for the DEV resource type.
+        - id: azure-sign-in
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Acquire delegated ARM access for the current human.
+          instructions: Complete Azure interactive sign-in and verify the intended subscription and tenant.
+          session_probe:
+            instructions: Use the active ARM client to confirm the signed-in user, tenant, subscription, and target resource permissions before reuse.
+          fresh_authentication:
+            force_supported: false
+            instructions: Disconnect only the selected ARM client connection, reconnect the declared ARM service root, and complete a new interactive sign-in before resuming.
+  azure-ai-sdk:
+    kind: sdk
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    ecosystem: project-manifest
+    description: Azure AI packages pinned in project manifests.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Pin the exact service- and language-specific Azure AI packages in the project manifest and lockfile.
+      steps:
+        - id: package-set
+          phase: availability_version
+          action: package
+          behavior: automatic
+          expected: "{resource.version}"
+          description: Verify the approved Azure AI package-set identifier and resolved package versions.
+        - id: azure-ai-sign-in
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Authenticate the current human using the approved Azure identity flow.
+          instructions: Complete interactive sign-in and retain no credentials or token output.
+          session_probe:
+            instructions: Use the consuming Azure AI client to confirm the current signed-in user, tenant, subscription, target, and required permissions before reuse.
+          fresh_authentication:
+            force_supported: false
+            instructions: Close only the selected Azure AI connection, relaunch its approved interactive identity flow, and complete a new sign-in before resuming.
+  power-bi-rest-api:
+    kind: endpoint
+    version: v1.0
+    version_policy: api_contract
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    endpoint: https://api.powerbi.com/v1.0/myorg
+    description: Power BI REST API.
+    preflight:
+      installation:
+        policy: not_applicable
+        guidance: No local SDK is required; use delegated access to the Power BI v1.0 service root.
+      steps:
+        - id: power-bi-root
+          phase: availability_version
+          action: endpoint
+          behavior: automatic
+          description: Validate the official Power BI REST v1.0 service root.
+        - id: workspace-capability
+          phase: capability
+          action: endpoint
+          behavior: automatic
+          description: Verify the required workspace and artifact API operation.
+        - id: power-bi-sign-in
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Acquire delegated Power BI access for the current human.
+          instructions: Complete interactive sign-in without persisting tokens or browser session data.
+          session_probe:
+            instructions: Use the active Power BI client to confirm the signed-in user, tenant, workspace, and required artifact permissions before reuse.
+          fresh_authentication:
+            force_supported: false
+            instructions: Disconnect only the selected Power BI connection, reconnect the declared service root, and complete a new interactive sign-in before resuming.
+  power-bi-model-sdk:
+    kind: sdk
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: interactive_user
+    supported_execution_hosts: [local_interactive]
+    ecosystem: project-manifest
+    description: Project-pinned semantic-model SDK.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Pin the exact Microsoft.AnalysisServices or approved semantic-model SDK version in the project manifest and lockfile.
+      steps:
+        - id: package-version
+          phase: availability_version
+          action: package
+          behavior: automatic
+          expected: "{resource.version}"
+          description: Verify the exact resolved semantic-model SDK version.
+        - id: xmla-access
+          phase: capability
+          action: human_confirmation
+          behavior: manual
+          description: Confirm XMLA read/write and workspace permissions are enabled when required.
+          instructions: Record the workspace capability decision without credentials.
+        - id: power-bi-sign-in
+          phase: authentication
+          action: interactive_auth
+          behavior: interactive
+          description: Authenticate the current human using delegated Power BI access.
+          instructions: Complete interactive sign-in without storing tokens.
+          session_probe:
+            instructions: Use the active semantic-model client to confirm the signed-in user, tenant, workspace, XMLA capability, and required permissions before reuse.
+          fresh_authentication:
+            force_supported: false
+            instructions: Close only the selected semantic-model connection, relaunch delegated Power BI sign-in, and complete a new interactive sign-in before resuming.
+  openapi-tooling:
+    kind: sdk
+    version: CONFIGURE_BEFORE_IMPLEMENTATION
+    version_policy: project_pinned
+    authentication: none
+    supported_execution_hosts: [local_interactive, github_copilot_cloud]
+    ecosystem: dotnet-tool
+    package: Microsoft.OpenApi.Hidi
+    description: Project-pinned OpenAPI authoring and validation tool; custom-connector output must be Swagger 2.0.
+    preflight:
+      installation:
+        policy: manual
+        guidance: Install the exact Microsoft.OpenApi.Hidi version in the repository dotnet tool manifest.
+      steps:
+        - id: package-version
+          phase: availability_version
+          action: package
+          behavior: automatic
+          expected: "{resource.version}"
+          description: Verify the exact local dotnet-tool package version.
+        - id: swagger-contract
+          phase: capability
+          action: human_confirmation
+          behavior: manual
+          description: Confirm the connector contract emits Swagger 2.0 rather than OpenAPI 3.x.
+          instructions: Record the validated contract path and tool result.
+
+routing:
+  - match: {component_type: schema_table}
+    rationale: The capability matrix documents solution-aware table and child-column metadata operations with explicit Web API solution context.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: metadata_contract, rationale: Official Microsoft documentation defines the allowed metadata request contract.}
+        - {resource: msal-python, purpose: delegated_authentication, rationale: The executor uses the pinned public-client MSAL dependency with an in-memory token cache.}
+        - {resource: dataverse-web-api, purpose: primary_solution_aware_authoring, rationale: MSCRM.SolutionUniqueName provides compiler-validated explicit custom-solution context for supported operations.}
+        - {resource: dataverse-mcp, purpose: discovery_and_targeted_verification, tools: [search, describe, read_query], rationale: "Generic MCP writes do not provide an equivalent compiler-validated custom-solution mechanism, so MCP is read and verification only."}
+      preferred:
+        - {resource: power-platform-cli, purpose: supported_targeted_source_operations, rationale: PAC is used only when the build skill explicitly requires supported source or package operations after the scoped write.}
+      fallback:
+        - {resource: maker-portal, purpose: documented_api_failure_fallback, rationale: Portal use requires sanitized issue evidence naming the unsupported or unavailable API capability.}
+  - match: {component_type: schema_column}
+    rationale: Column create, update, delete, publish, and verification are capability-gated metadata operations with explicit solution context.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: metadata_contract, rationale: Official Microsoft documentation defines supported column metadata payloads and methods.}
+        - {resource: msal-python, purpose: delegated_authentication, rationale: The executor requires the pinned in-memory public-client authentication library.}
+        - {resource: dataverse-web-api, purpose: primary_solution_aware_authoring, rationale: The documented solution header binds the exact column operation to the routed custom solution.}
+        - {resource: dataverse-mcp, purpose: discovery_and_targeted_verification, tools: [search, describe, read_query], rationale: MCP generic writes are not primary because they do not guarantee compiler-validated explicit custom-solution context.}
+      fallback:
+        - {resource: maker-portal, purpose: documented_api_failure_fallback, rationale: Portal fallback is allowed only with issue evidence for the specific API failure or unsupported payload.}
+  - match: {component_type: "schema_*"}
+    rationale: Remaining schema types use only operation profiles explicitly approved in the capability matrix.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: metadata_contract, rationale: Official metadata documentation is required for every selected schema operation.}
+        - {resource: msal-python, purpose: delegated_authentication, rationale: Public-client MSAL is pinned and tokens remain in memory only.}
+        - {resource: dataverse-web-api, purpose: primary_solution_aware_authoring, rationale: Supported metadata operations use the documented solution header or action parameter.}
+        - {resource: dataverse-mcp, purpose: discovery_and_targeted_verification, tools: [search, describe, read_query], rationale: Generic MCP writes do not provide compiler-validated explicit solution context and are verification-only.}
+      fallback:
+        - {resource: maker-portal, purpose: documented_api_failure_fallback, rationale: Portal fallback must cite the exact failed or unsupported capability in issue evidence.}
+  - match: {component_type: config_queue}
+    rationale: Queue work is environment-bound and therefore retains direct MCP record authoring rather than custom-solution routing.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: configuration_grounding, rationale: Official configuration guidance grounds the exact queue operation.}
+        - {resource: dataverse-mcp, purpose: primary_environment_record_authoring, tools: [search, describe, read_query, create_record, update_record], rationale: Environment-bound records do not require explicit custom-solution context.}
+      fallback:
+        - {resource: maker-portal, purpose: human_configuration, rationale: Portal fallback requires issue evidence for an unavailable or unsupported MCP operation.}
+  - match: {component_type: config_audit}
+    rationale: Dataverse audit enablement is an environment administration operation rather than custom-solution component authoring.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: audit_grounding, rationale: Official audit guidance defines the supported administration path.}
+        - {resource: power-platform-admin-center, purpose: primary_environment_audit_configuration, rationale: The admin center is the registered environment-level audit authoring surface.}
+        - {resource: dataverse-mcp, purpose: targeted_audit_verification, tools: [search, describe, read_query], rationale: MCP is used only to verify the exact configured audit scope.}
+  - match: {component_type: config_env_variable}
+    rationale: Environment-variable definitions are solution components with documented row CRUD and explicit solution-header support.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: environment_variable_contract, rationale: Official table references define writable fields and supported messages.}
+        - {resource: msal-python, purpose: delegated_authentication, rationale: The Web API executor uses the pinned in-memory MSAL public-client flow.}
+        - {resource: dataverse-web-api, purpose: primary_solution_aware_authoring, rationale: Definition CRUD uses MSCRM.SolutionUniqueName and never logs variable values.}
+        - {resource: dataverse-mcp, purpose: definition_verification_only, tools: [search, describe, read_query], rationale: "Generic MCP writes lack compiler-validated explicit custom-solution context, so MCP verifies only non-secret definition metadata."}
+      preferred:
+        - {resource: power-platform-cli, purpose: supported_deployment_settings_operations, rationale: "PAC remains limited to documented solution and deployment-settings work, not generic definition creation."}
+      fallback:
+        - {resource: maker-portal, purpose: documented_api_failure_fallback, rationale: Portal fallback requires sanitized issue evidence and must never expose current or secret values.}
+  - match: {component_type: "config_ai_*"}
+    rationale: AI-agent configuration requires the registered Copilot Studio authoring resource; no generic Web API payload contract is claimed.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: ai_capability_grounding, rationale: Official product documentation grounds the selected agent capability.}
+        - {resource: copilot-studio-authoring, purpose: primary_agent_authoring, rationale: The product-specific authoring resource owns AI-agent changes.}
+        - {resource: dataverse-mcp, purpose: data_grounding_and_verification, tools: [search, search_data, describe, read_query], rationale: MCP provides targeted Dataverse grounding and verification only.}
+  - match: {component_type: "config_*"}
+    rationale: These visual configuration types have no compiler-reliable documented Web API payload contract and retain Maker Portal primary.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: configuration_grounding, rationale: Official documentation must confirm the selected product configuration path.}
+        - {resource: maker-portal, purpose: primary_visual_configuration, rationale: Portal is primary only because the capability matrix explicitly marks Web API construction unsupported or unreliable.}
+        - {resource: dataverse-mcp, purpose: targeted_verification_only, tools: [search, describe, read_query], rationale: MCP generic writes cannot guarantee explicit custom-solution context and are not used for solution-aware authoring.}
+      preferred:
+        - {resource: power-platform-cli, purpose: supported_solution_source_operations, rationale: PAC is limited to supported solution or source operations and never substitutes for generic component creation.}
+  - match: {component_type: uiux_form}
+    rationale: SystemForm CRUD exists, but complete safe FormXml or FormJson construction is not derivable from the current payload.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: form_contract, rationale: Official SystemForm documentation grounds the supported metadata surface and its limits.}
+        - {resource: maker-portal, purpose: primary_form_authoring, rationale: Portal remains primary because the capability matrix marks direct API form authoring not compiler-reliable.}
+        - {resource: dataverse-mcp, purpose: targeted_form_verification, tools: [search, describe, read_query], rationale: MCP reads verify the exact form; generic writes do not guarantee custom-solution context.}
+      preferred:
+        - {resource: power-platform-cli, purpose: supported_solution_source_operations, rationale: PAC is used only for supported targeted solution/source operations.}
+  - match: {component_type: "uiux_*"}
+    rationale: Visual UI artifacts retain Maker Portal primary unless a future capability profile proves a complete supported Web API payload.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: ui_contract, rationale: Official product documentation grounds the selected UI authoring route.}
+        - {resource: maker-portal, purpose: primary_ui_authoring, rationale: Portal is primary because no reliable compiler-owned API construction is claimed.}
+        - {resource: dataverse-mcp, purpose: targeted_ui_verification, tools: [search, describe, read_query], rationale: MCP is restricted to discovery and targeted post-action verification.}
+      preferred:
+        - {resource: power-platform-cli, purpose: supported_solution_source_operations, rationale: PAC remains limited to supported source and solution operations.}
+  - match: {component_type: flow_cloud}
+    rationale: Workflow row CRUD does not document the complete cloud-flow clientdata authoring contract, so visual authoring remains primary.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: flow_grounding, rationale: Official Power Automate and Workflow references ground the supported route.}
+        - {resource: maker-portal, purpose: primary_visual_flow_authoring, rationale: Portal is primary because direct clientdata construction is not compiler-reliable.}
+        - {resource: dataverse-mcp, purpose: schema_and_runtime_verification, tools: [search, describe, read_query], rationale: "MCP provides targeted discovery and verification only, not solution-aware writes."}
+      preferred:
+        - {resource: power-platform-cli, purpose: supported_solution_operations, rationale: PAC is used only for documented solution/source operations and not generic flow creation.}
+  - match: {component_type: code_plugin}
+    rationale: Plug-in implementation uses the supported build, SDK, registration, and solution toolchain rather than generic Web API component creation.
+    resources: &dotnet_code
+      required:
+        - {resource: microsoft-learn, purpose: execution_pipeline_grounding, rationale: Official plug-in documentation grounds registration and runtime behavior.}
+        - {resource: dotnet-toolchain, purpose: build_and_test, rationale: The pinned .NET toolchain builds and tests the component.}
+        - {resource: dataverse-dotnet-sdk, purpose: dataverse_code, rationale: The registered Dataverse SDK supports code integration and registration contracts.}
+        - {resource: power-platform-cli, purpose: registration_and_solution_operations, rationale: PAC is primary only for documented registration and solution/source operations.}
+        - {resource: dataverse-mcp, purpose: schema_and_runtime_verification, tools: [search, describe, read_query], rationale: MCP performs targeted discovery and verification without generic solution-aware writes.}
+  - match: {component_type: code_custom_api}
+    rationale: Custom API code and registration use the same documented .NET and PAC route as plug-ins.
+    resources: *dotnet_code
+  - match: {component_type: code_pcf}
+    rationale: PCF controls require the supported Node build and PAC solution toolchain, not generic Dataverse Web API creation.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: pcf_contract_grounding, rationale: Official PCF documentation defines the component build contract.}
+        - {resource: node-toolchain, purpose: build_and_test, rationale: The pinned Node toolchain builds and tests the control.}
+        - {resource: power-platform-cli, purpose: pcf_and_solution_operations, rationale: PAC owns supported PCF and solution packaging operations.}
+        - {resource: dataverse-mcp, purpose: schema_and_runtime_verification, tools: [search, describe, read_query], rationale: MCP is used for targeted reads only.}
+  - match: {component_type: "code_webres_*"}
+    rationale: Although WebResource CRUD is documented, content construction and repository binding are not complete in the current payload contract.
+    resources:
+      required:
+        - {resource: node-toolchain, purpose: build_and_test, rationale: The registered Node toolchain builds and validates web resource content.}
+        - {resource: power-platform-cli, purpose: primary_solution_source_operations, rationale: PAC remains primary for supported solution source and package operations.}
+        - {resource: dataverse-mcp, purpose: targeted_runtime_verification, tools: [search, describe, read_query], rationale: MCP verifies exact metadata and runtime behavior only.}
+  - match: {component_type: "mcs_*"}
+    rationale: Copilot Studio artifacts require the registered product-specific authoring MCP.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: copilot_studio_grounding, rationale: Official product documentation grounds agent authoring.}
+        - {resource: copilot-studio-authoring, purpose: primary_agent_authoring, rationale: The approved Copilot Studio resource performs product-specific authoring.}
+        - {resource: dataverse-mcp, purpose: data_grounding_and_verification, tools: [search, search_data, describe, read_query], rationale: Dataverse MCP remains targeted grounding and verification only.}
+      allowed:
+        - {resource: power-platform-cli, purpose: supported_solution_operations, rationale: PAC is allowed only for documented solution operations.}
+  - match: {component_type: sec_role}
+    rationale: Role CRUD exists, but safe base-role copy, BU identity, and privilege resolution are not compiler-reliable from the current payload.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: security_model_grounding, rationale: Official security-role documentation defines supported messages and privilege semantics.}
+        - {resource: maker-portal, purpose: primary_least_privilege_authoring, rationale: Portal is primary because the capability matrix rejects unreliable direct role construction.}
+        - {resource: dataverse-mcp, purpose: targeted_role_verification, tools: [search, describe, read_query], rationale: MCP verifies exact effective privileges only and is not used for generic solution-aware writes.}
+  - match: {component_type: sec_field_profile}
+    rationale: Field-security authoring remains visual until the payload contract can safely construct the profile and every field permission.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: security_model_grounding, rationale: Official security documentation grounds the exact field profile behavior.}
+        - {resource: maker-portal, purpose: primary_field_security_authoring, rationale: Portal is primary because no complete compiler-reliable Web API payload is claimed.}
+        - {resource: dataverse-mcp, purpose: targeted_security_verification, tools: [search, describe, read_query], rationale: MCP is read and verification only for this solution-aware component.}
+  - match: {component_type: sec_business_unit}
+    rationale: Business units are environment-bound records and do not use custom-solution routing.
+    resources: &environment_security
+      required:
+        - {resource: microsoft-learn, purpose: security_model_grounding, rationale: Official security documentation grounds environment hierarchy operations.}
+        - {resource: dataverse-mcp, purpose: primary_environment_record_authoring, tools: [search, describe, read_query, create_record, update_record], rationale: Environment-bound security records do not require explicit custom-solution context.}
+      fallback:
+        - {resource: maker-portal, purpose: human_configuration, rationale: Portal fallback requires issue evidence for an unavailable or unsupported MCP operation.}
+  - match: {component_type: sec_team}
+    rationale: Teams are environment-bound records and use the same environment security route.
+    resources: *environment_security
+  - match: {component_type: "az_ai_*"}
+    rationale: Azure AI components remain repository and Azure-resource operations outside Dataverse Web API routing.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: azure_ai_grounding, rationale: Official Azure AI documentation grounds the selected resource contract.}
+        - {resource: azure-cli, purpose: resource_operations, rationale: The registered Azure CLI performs supported resource operations.}
+        - {resource: bicep-cli, purpose: infrastructure_as_code, rationale: Bicep is the deterministic infrastructure authoring resource.}
+        - {resource: azure-resource-manager, purpose: deployment_and_verification, rationale: ARM provides the exact stable resource API and verification surface.}
+        - {resource: azure-ai-sdk, purpose: application_integration, rationale: The registered SDK supports application integration.}
+  - match: {component_type: "az_*"}
+    rationale: Azure infrastructure components remain repository and ARM operations outside Dataverse Web API routing.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: azure_grounding, rationale: Official Azure documentation grounds the resource contract.}
+        - {resource: azure-cli, purpose: resource_operations, rationale: The registered CLI performs supported Azure operations.}
+        - {resource: bicep-cli, purpose: infrastructure_as_code, rationale: Bicep is the deterministic infrastructure authoring resource.}
+        - {resource: azure-resource-manager, purpose: deployment_and_verification, rationale: ARM provides deployment and targeted verification.}
+  - match: {component_type: "bi_*"}
+    rationale: Power BI artifacts use registered Power BI resources rather than Dataverse Web API.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: power_bi_grounding, rationale: Official Power BI documentation grounds the artifact contract.}
+        - {resource: power-bi-rest-api, purpose: workspace_and_artifact_operations, rationale: The registered Power BI API owns workspace and artifact operations.}
+      preferred:
+        - {resource: power-bi-model-sdk, purpose: semantic_model_authoring, rationale: The model SDK is preferred for deterministic semantic-model authoring.}
+  - match: {component_type: integ_connector}
+    rationale: Custom connectors use OpenAPI authoring and supported PAC connector/solution operations.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: connector_grounding, rationale: Official connector documentation grounds the contract.}
+        - {resource: openapi-tooling, purpose: contract_authoring_and_validation, rationale: The registered OpenAPI tool validates the connector definition.}
+        - {resource: power-platform-cli, purpose: connector_and_solution_operations, rationale: PAC remains primary for documented connector and solution operations.}
+        - {resource: dataverse-mcp, purpose: schema_and_test_data_verification, tools: [search, describe, read_query], rationale: MCP provides targeted schema and test-data reads only.}
+  - match: {component_type: integ_connection_ref}
+    rationale: Connection Reference row CRUD is documented and supports explicit solution context through MSCRM.SolutionUniqueName.
+    resources:
+      required:
+        - {resource: microsoft-learn, purpose: connection_reference_contract, rationale: Official table references define supported messages and writable fields.}
+        - {resource: msal-python, purpose: delegated_authentication, rationale: The executor uses pinned public-client MSAL with an in-memory token cache.}
+        - {resource: dataverse-web-api, purpose: primary_solution_aware_authoring, rationale: Supported row operations use compiler-owned paths and the explicit solution header.}
+        - {resource: dataverse-mcp, purpose: targeted_reference_verification, tools: [search, describe, read_query], rationale: Generic MCP writes do not guarantee compiler-validated custom-solution context and are verification-only.}
+      preferred:
+        - {resource: power-platform-cli, purpose: supported_solution_and_settings_operations, rationale: PAC handles only supported solution/source and deployment-settings work.}
+      fallback:
+        - {resource: maker-portal, purpose: interactive_binding_or_api_failure, rationale: Portal is allowed for connection binding or with issue evidence for the specific API failure.}
+
+validation:
+  require_runtime_capability_probe: [mcp]
+  destructive_operations:
+    require_explicit_human_approval: true
+  capability_matrix:
+    require_all_component_types: true
+    require_official_references_for_supported: true
+    require_portal_fallback_issue_evidence: true

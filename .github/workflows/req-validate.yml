@@ -1,0 +1,48 @@
+name: "Validate requirements (T1)"
+
+# Deterministic Tier-1 gate for Stage 1/2 output. Runs on every PR (no path
+# filter) so it can serve as an always-reported REQUIRED status check on `main`
+# without deadlocking PRs that don't touch the requirement set.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-requirements:
+    name: "Validate requirements"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependencies
+        run: pip install pyyaml jsonschema
+
+      - id: scope
+        name: Detect requirement-contract changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -Eq '^(conventions\.yml|\.d365/spec-kit/compatibility\.yml|specs/_schema/|intake/|specs/intakes/INTK-[0-9]{4}/(requirement-groups\.yml|requirements/))'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate REQ files
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_reqs.py
+
+      - name: Check generated requirement indexes
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/compile_requirements.py --check

@@ -1,0 +1,64 @@
+name: "Validate design (T1)"
+
+# Deterministic Tier-1 gate (DesValidator) for Stage 3 output. Runs on every PR
+# (no path filter) so it can serve as an always-reported REQUIRED status check on
+# `main` without deadlocking PRs that don't touch the design specs.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-design:
+    name: "Validate design"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependencies
+        run: pip install pyyaml jsonschema
+
+      - id: scope
+        name: Detect plan-contract changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -Eq '^(conventions\.yml|\.d365/(spec-kit/|design-sources\.(yml|schema\.json)|authoring-targets\.(yml|schema\.json)|development-resources\.(yml|schema\.json))|\.vscode/mcp\.json|specs/_schema/|specs/[0-9]{3}-[^/]+/plan\.md|specs/_index/repository-context\.json|\.specify/context/plan-context\.json)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check repository context
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/compile_repository_context.py --check
+
+      - name: Validate design grounding sources
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_design_sources.py
+
+      - name: Validate authoring targets
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_authoring_targets.py
+
+      - name: Validate development resources
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_development_resources.py
+
+      - name: Compile check (designs in sync with the approved feature source)
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/compile_design.py --check
+
+      - name: Validate design specs
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_design.py

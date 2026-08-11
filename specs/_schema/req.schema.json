@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/specs/_schema/req.schema.json",
+  "title": "Atomic requirement (REQ) front-matter",
+  "description": "Deterministic contract for one intake-scoped requirement under specs/intakes/INTK-####/requirements/INTK-####-REQ-###.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "source_file", "intake_batch", "requirement_group", "location", "author", "sha256", "confidence", "title", "status"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^INTK-[0-9]{4}-REQ-[0-9]{3}$",
+      "description": "Intake-scoped, zero-padded requirement id."
+    },
+    "source_file": {
+      "type": "string",
+      "pattern": "^intake/.+",
+      "description": "Path to the evidence document under intake/ (validator also checks it exists on disk)."
+    },
+    "intake_batch": {
+      "type": "string",
+      "pattern": "^INTK-[0-9]{4}$",
+      "description": "The intake batch (a registry id in intake/_index.md) whose documents this requirement was extracted from. Written at intake (Phase 1); the validator checks it is registered."
+    },
+    "requirement_group": {
+      "type": "string",
+      "pattern": "^INTK-[0-9]{4}-GRP-[0-9]{2}$",
+      "description": "Exactly one non-governing business capability/process group from this intake's requirement-groups.yml. This classification never replaces the REQ's evidence provenance or dictates feature boundaries."
+    },
+    "location": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Where in the source the requirement was found (page / slide / cell / section)."
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of the source file, lowercase hex."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Extraction confidence. 'low' is well-formed but the validator emits a warning for the human reviewer."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Concise evidence-grounded title written during intake extraction."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["functional", "non-functional", "integration", "data", "security", "agentic"],
+      "description": "conventions.yml requirement_types. Added in Phase 2."
+    },
+    "module": {
+      "type": "string",
+      "enum": ["Sales", "Service", "ContactCenter", "PowerPlatform", "Azure", "CopilotStudio"],
+      "description": "conventions.yml modules. Added in Phase 2."
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["Must", "Should", "Could", "Wont"],
+      "description": "MoSCoW (conventions.yml priorities). Added in Phase 2."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "reviewed", "approved", "building", "done"],
+      "description": "conventions.yml status_flow, forward-only. Required as 'draft' during intake extraction."
+    },
+    "feature": {
+      "type": "string",
+      "pattern": "^FEAT-[0-9]{2}$",
+      "description": "Set in Phase 2 grouping."
+    },
+    "epic": {
+      "type": "string",
+      "pattern": "^EPIC-[0-9]{2}$",
+      "description": "Set in Phase 2 grouping."
+    },
+    "depends_on": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^INTK-[0-9]{4}-REQ-[0-9]{3}$" },
+      "uniqueItems": true,
+      "description": "Acyclic dependency ids, completed in Phase 2."
+    },
+    "grounding": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Microsoft Learn (or other authoritative) URLs backing the criteria."
+    },
+    "nfr": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric", "target"],
+        "properties": {
+          "metric": { "type": "string", "enum": ["agent_response", "page_load", "crud_action", "availability", "throughput"] },
+          "target": { "type": "string", "minLength": 1 }
+        }
+      },
+      "description": "Structured NFRs (conventions.yml nfr_categories). Never free prose."
+    }
+  }
+}

@@ -1,0 +1,125 @@
+name: Test
+description: Verify implemented behavior and NFRs against approved requirements, feature scenarios, and design.
+title: "Test: DES-## <component or scenario name>"
+labels: ["test"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Test (lifecycle stage 6 of 8)
+
+        **Purpose:** Verify implemented behavior and non-functional requirements
+        against approved requirements, feature scenarios, and design.
+
+        **Input:** Built components plus linked REQ, FEAT, DES, and UX artifacts
+        **Output:** Test plan, execution results, defect links, and approval evidence
+        **Required skill:** to be defined as reusable test skills are published
+        (see `taxonomy/component-types.yml` `skill_phases`)
+        **Validation:** Unit, integration, UI, performance, security, and
+        conformance suites as applicable
+        **Human gate:** Test approval
+        **Next handoff:** Release issue when all required tests pass
+
+  - type: textarea
+    id: source-artifacts
+    attributes:
+      label: Source artifacts and links
+      description: Built components plus the REQ, FEAT, DES, and UX paths and links being verified.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope-environment
+    attributes:
+      label: Scope and environment
+      description: Test scope and the environment where it executes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-suites
+    attributes:
+      label: Test suites
+      description: Unit, integration, UI, performance, security, or conformance suites in scope.
+    validations:
+      required: false
+
+  - type: input
+    id: planned-executed-counts
+    attributes:
+      label: Planned and executed counts
+      description: "Example: planned 45, executed 42"
+    validations:
+      required: false
+
+  - type: textarea
+    id: defect-links
+    attributes:
+      label: Defect links
+      description: Links to defects found during execution, if any.
+    validations:
+      required: false
+
+  - type: input
+    id: planned-completion
+    attributes:
+      label: Planned completion
+      description: Expected date for test approval.
+      placeholder: "yyyy-mm-dd"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      description: Exact current position in the Test workflow (matches templates/tracking/project-definition.yml stages[test].stage_status_flow).
+      options:
+        - Handoff Draft
+        - Test Planning
+        - Test Preparation
+        - Ready to Execute
+        - Executing
+        - Defects Found
+        - Blocked
+        - Retesting
+        - Test Review
+        - Approved
+      default: 1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      description: The human gate that applies to this stage.
+      options:
+        - Test approval
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: downstream-handoff
+    attributes:
+      label: Downstream handoff
+      description: Link to the Release issue created once all required tests pass, or state that it is not yet created.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: Every required test suite for this scope has executed.
+          required: false
+        - label: All required tests pass, or open defects are linked with an owner.
+          required: false
+        - label: Evidence links (results, logs, reports) are recorded on this issue.
+          required: false
+        - label: Test approval gate is approved and recorded on this issue.
+          required: false
+        - label: The downstream Release issue exists and is linked above.
+          required: false

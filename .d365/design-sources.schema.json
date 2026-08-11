@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/.d365/design-sources.schema.json",
+  "title": "Design grounding sources",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "sources"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/mcp"
+          },
+          {
+            "$ref": "#/$defs/repository"
+          },
+          {
+            "$ref": "#/$defs/knowledge"
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "common": {
+      "type": "object",
+      "required": ["id", "kind", "required", "authority", "purposes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "kind": {
+          "enum": ["mcp", "repository", "knowledge"]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "authority": {
+          "enum": ["authoritative", "project", "advisory"]
+        },
+        "purposes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "mcp": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "required", "authority", "purposes", "server"],
+          "properties": {
+            "id": true,
+            "kind": {
+              "const": "mcp"
+            },
+            "required": true,
+            "authority": true,
+            "purposes": true,
+            "server": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "repository": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "required", "authority", "purposes", "location", "ref"],
+          "properties": {
+            "id": true,
+            "kind": {
+              "const": "repository"
+            },
+            "required": true,
+            "authority": true,
+            "purposes": true,
+            "location": {
+              "type": "string",
+              "minLength": 1
+            },
+            "ref": {
+              "type": "string",
+              "minLength": 1
+            },
+            "paths": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "knowledge": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "required", "authority", "purposes", "location", "access"],
+          "properties": {
+            "id": true,
+            "kind": {
+              "const": "knowledge"
+            },
+            "required": true,
+            "authority": true,
+            "purposes": true,
+            "location": {
+              "type": "string",
+              "minLength": 1
+            },
+            "access": {
+              "enum": ["file", "url", "mcp"]
+            },
+            "server": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    }
+  }
+}

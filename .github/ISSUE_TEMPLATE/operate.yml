@@ -1,0 +1,125 @@
+name: Operate
+description: Monitor the released solution, investigate service issues, remediate, and feed approved changes back into the lifecycle.
+title: "Operate: <environment> <event/incident id>"
+labels: ["operate"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Operate (lifecycle stage 8 of 8)
+
+        **Purpose:** Monitor the released solution, investigate service issues,
+        remediate, and feed approved changes back into the lifecycle.
+
+        **Input:** Released solution, telemetry, alerts, audit, and user feedback
+        **Output:** Monitoring evidence, incident/problem records, remediation,
+        and change intake
+        **Required skill:** to be defined as reusable operations and support
+        skills are published (see `taxonomy/component-types.yml` `skill_phases`)
+        **Validation:** Health, telemetry, audit, SLA, incident, and regression checks
+        **Human gate:** Service review
+        **Next handoff:** Closed operation or new Intake/Change issue
+
+  - type: input
+    id: environment-release
+    attributes:
+      label: Environment and release version
+      placeholder: "Example: Production, REL-0001"
+    validations:
+      required: true
+
+  - type: input
+    id: event-id
+    attributes:
+      label: Event / incident ID
+      placeholder: "OPS-0001"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+      default: 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: telemetry-impact
+    attributes:
+      label: Telemetry links and impact
+      description: Monitoring or telemetry evidence and the observed impact.
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnosis-remediation
+    attributes:
+      label: Diagnosis and remediation
+    validations:
+      required: false
+
+  - type: input
+    id: planned-completion
+    attributes:
+      label: Planned completion
+      description: Expected date for service review.
+      placeholder: "yyyy-mm-dd"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      description: Exact current position in the Operate workflow (matches templates/tracking/project-definition.yml stages[operate].stage_status_flow).
+      options:
+        - Monitoring
+        - Alerted
+        - Investigating
+        - Diagnosis Complete
+        - Remediating
+        - Verifying
+        - Service Review
+        - Resolved
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      description: The human gate that applies to this stage.
+      options:
+        - Service review
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: downstream-handoff
+    attributes:
+      label: Downstream handoff
+      description: Link to the new Intake or change issue this operation feeds back into, or state that the operation is closed with no follow-up.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: Telemetry, audit, and SLA evidence are linked above.
+          required: false
+        - label: Health, telemetry, audit, SLA, incident, and regression checks pass.
+          required: false
+        - label: Service review gate is approved and recorded on this issue.
+          required: false
+        - label: A follow-up Intake or change issue is linked above, or the operation is explicitly closed with no follow-up.
+          required: false

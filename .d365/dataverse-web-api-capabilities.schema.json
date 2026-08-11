@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/.d365/dataverse-web-api-capabilities.schema.json",
+  "title": "Capability-based Dataverse Web API authoring contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy",
+    "official_references",
+    "profiles",
+    "components"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mcp_solution_authoring_rationale",
+        "portal_fallback_evidence_required",
+        "destructive_approval_required",
+        "delete_semantics"
+      ],
+      "properties": {
+        "mcp_solution_authoring_rationale": {
+          "type": "string",
+          "minLength": 80
+        },
+        "portal_fallback_evidence_required": { "const": true },
+        "destructive_approval_required": { "const": true },
+        "delete_semantics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["delete", "remove_solution_component"],
+          "properties": {
+            "delete": { "type": "string", "minLength": 40 },
+            "remove_solution_component": { "type": "string", "minLength": 40 }
+          }
+        }
+      }
+    },
+    "official_references": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "url"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1 },
+          "url": {
+            "type": "string",
+            "pattern": "^https://(?:learn\\.microsoft\\.com/|github\\.com/microsoft/)"
+          }
+        }
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/profile" }
+    },
+    "components": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_*]*$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["implementation_scope", "operations"],
+        "properties": {
+          "implementation_scope": {
+            "enum": [
+              "repository_only",
+              "repository_and_dataverse_environment",
+              "repository_and_dataverse_solution"
+            ]
+          },
+          "operations": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["create", "update", "delete", "verify"],
+            "properties": {
+              "create": { "type": "string", "minLength": 1 },
+              "update": { "type": "string", "minLength": 1 },
+              "delete": { "type": "string", "minLength": 1 },
+              "verify": { "type": "string", "minLength": 1 },
+              "publish": { "type": "string", "minLength": 1 },
+              "add_solution_component": { "type": "string", "minLength": 1 },
+              "remove_solution_component": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "http": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "endpoint_family", "path_template"],
+      "properties": {
+        "method": { "enum": ["GET", "POST", "PATCH", "PUT", "DELETE"] },
+        "endpoint_family": {
+          "enum": ["metadata", "entity_set", "unbound_action"]
+        },
+        "path_template": { "type": "string", "minLength": 1 }
+      }
+    },
+    "solutionContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism"],
+      "properties": {
+        "mechanism": {
+          "enum": [
+            "MSCRM.SolutionUniqueName",
+            "action_parameter",
+            "not_applicable"
+          ]
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "value_source": { "type": "string", "minLength": 1 }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource", "rationale"],
+      "properties": {
+        "resource": { "type": "string", "minLength": 1 },
+        "tools": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "http": { "$ref": "#/$defs/http" },
+        "rationale": { "type": "string", "minLength": 20 }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource", "allowed_when", "issue_evidence_required"],
+      "properties": {
+        "resource": { "type": "string", "minLength": 1 },
+        "allowed_when": {
+          "enum": [
+            "documented_operation_unsupported_or_primary_unavailable",
+            "not_applicable"
+          ]
+        },
+        "issue_evidence_required": { "type": "boolean" }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "support",
+        "operation",
+        "primary_resource",
+        "solution_context",
+        "verification",
+        "fallback",
+        "executor",
+        "rationale",
+        "official_references"
+      ],
+      "properties": {
+        "support": {
+          "enum": [
+            "supported",
+            "documented_but_not_compiler_reliable",
+            "unsupported_or_not_applicable"
+          ]
+        },
+        "operation": {
+          "enum": [
+            "any",
+            "create",
+            "update",
+            "delete",
+            "verify",
+            "publish",
+            "add_solution_component",
+            "remove_solution_component"
+          ]
+        },
+        "primary_resource": { "type": "string", "minLength": 1 },
+        "http": { "$ref": "#/$defs/http" },
+        "solution_context": { "$ref": "#/$defs/solutionContext" },
+        "verification": { "$ref": "#/$defs/verification" },
+        "fallback": { "$ref": "#/$defs/fallback" },
+        "executor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["supported", "builder"],
+          "properties": {
+            "supported": { "type": "boolean" },
+            "builder": { "type": "string", "minLength": 1 }
+          }
+        },
+        "destructive_effect": {
+          "enum": ["environment_delete", "solution_membership_only"]
+        },
+        "rationale": { "type": "string", "minLength": 30 },
+        "official_references": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "support": { "const": "supported" } },
+            "required": ["support"]
+          },
+          "then": {
+            "required": ["http"],
+            "properties": {
+              "primary_resource": { "const": "dataverse-web-api" },
+              "official_references": { "minItems": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "enum": ["delete", "remove_solution_component"]
+              }
+            },
+            "required": ["operation"]
+          },
+          "then": { "required": ["destructive_effect"] }
+        }
+      ]
+    }
+  }
+}

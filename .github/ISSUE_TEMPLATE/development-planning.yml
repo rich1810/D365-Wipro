@@ -1,0 +1,70 @@
+name: Development Planning
+description: Generate and review tasks.md plus one DEV artifact per approved plan component.
+title: "Development Planning: FEAT-## <feature name>"
+labels: ["development"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Development (planning handoff)
+
+        **Input:** One approved feature workspace `plan.md`
+        **Output:** Generated `tasks.md`, `development/DEV-####.md`, and task context
+        **Validation:** `python scripts/compile_tasks.py --check` then `python scripts/validate_tasks.py`
+        **Human gate:** Development planning review
+        **Next handoff:** One draft Development Execution issue per DEV artifact
+
+  - type: input
+    id: plan-source
+    attributes:
+      label: Approved plan
+      placeholder: "specs/001-email-servicing/plan.md (link)"
+    validations:
+      required: true
+
+  - type: input
+    id: dev-lead
+    attributes:
+      label: Development lead
+      description: GitHub login of the person reviewing task boundaries and assignments.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      options:
+        - Handoff Draft
+        - Ready for Planning
+        - Planning
+        - Planning Review
+        - Changes Requested
+        - Approved
+      default: 1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      options:
+        - Development planning review
+      default: 0
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: Every approved plan component maps to exactly one DEV artifact.
+          required: false
+        - label: DEV dependencies are acyclic and all referenced requirements resolve.
+          required: false
+        - label: Task compilation and validation pass with no drift.
+          required: false
+        - label: The planning pull request is approved and merged by a human.
+          required: false

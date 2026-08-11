@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/specs/_schema/dev.schema.json",
+  "title": "Development execution artifact front-matter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "feature",
+    "plan",
+    "component",
+    "component_type",
+    "executor",
+    "build_skill",
+    "satisfies",
+    "depends_on",
+    "status",
+    "source_plan_hash",
+    "task_context_hash"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^DEV-[0-9]{4}$" },
+    "feature": { "type": "string", "pattern": "^FEAT-[0-9]{2}$" },
+    "plan": { "type": "string", "pattern": "^DES-[0-9]{2}$" },
+    "component": { "type": "string", "pattern": "^DES-[0-9]{2}-CMP-[0-9]{3}$" },
+    "component_type": { "type": "string", "minLength": 1 },
+    "executor": { "type": "string", "enum": ["agent", "human", "hybrid"] },
+    "execution_host": {
+      "type": "string",
+      "enum": ["local_interactive", "cloud_or_local"]
+    },
+    "owner": { "type": ["string", "null"] },
+    "build_skill": { "type": "string", "minLength": 1 },
+    "implementation_scope": {
+      "type": "string",
+      "enum": [
+        "repository_only",
+        "repository_and_dataverse_solution",
+        "repository_and_dataverse_environment"
+      ]
+    },
+    "authoring_target": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "kind",
+            "environment",
+            "environment_url",
+            "environment_id",
+            "authentication_mode"
+          ],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "kind": {
+              "type": "string",
+              "enum": ["dataverse_solution", "dataverse_environment"]
+            },
+            "environment": { "type": "string", "minLength": 1 },
+            "environment_url": { "type": "string", "minLength": 1 },
+            "environment_id": { "type": "string", "minLength": 1 },
+            "authentication_mode": { "const": "interactive_user" },
+            "connection_alias": { "type": "string", "minLength": 1 },
+            "solution": { "type": "string", "minLength": 1 },
+            "solution_unique_name": { "type": "string", "minLength": 1 },
+            "publisher_name": { "type": "string", "minLength": 1 },
+            "publisher_prefix": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "authentication_policy": {
+      "type": "string",
+      "enum": ["reuse_if_valid", "always_prompt"]
+    },
+    "satisfies": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^INTK-[0-9]{4}-REQ-[0-9]{3}$" }
+    },
+    "depends_on": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^DEV-[0-9]{4}$" }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "ready",
+        "blocked",
+        "in_progress",
+        "waiting_for_human",
+        "in_review",
+        "completed",
+        "superseded",
+        "cancelled"
+      ]
+    },
+    "source_plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "task_context_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "supersedes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^DEV-[0-9]{4}$" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "draft",
+              "ready",
+              "blocked",
+              "in_progress",
+              "waiting_for_human",
+              "in_review"
+            ]
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["implementation_scope", "execution_host", "authoring_target", "authentication_policy"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "implementation_scope": { "const": "repository_only" } },
+        "required": ["implementation_scope"]
+      },
+      "then": { "properties": { "authoring_target": { "type": "null" } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "implementation_scope": {
+            "const": "repository_and_dataverse_solution"
+          }
+        },
+        "required": ["implementation_scope"]
+      },
+      "then": {
+        "properties": {
+          "authoring_target": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "environment",
+              "environment_url",
+              "environment_id",
+              "authentication_mode",
+              "solution",
+              "solution_unique_name",
+              "publisher_name",
+              "publisher_prefix"
+            ],
+            "properties": { "kind": { "const": "dataverse_solution" } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "implementation_scope": {
+            "const": "repository_and_dataverse_environment"
+          }
+        },
+        "required": ["implementation_scope"]
+      },
+      "then": {
+        "properties": {
+          "authoring_target": {
+            "type": "object",
+            "properties": { "kind": { "const": "dataverse_environment" } },
+            "not": {
+              "anyOf": [
+                { "required": ["solution"] },
+                { "required": ["solution_unique_name"] },
+                { "required": ["publisher_name"] },
+                { "required": ["publisher_prefix"] }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

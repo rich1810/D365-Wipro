@@ -1,0 +1,122 @@
+name: Feature
+description: Classify reviewed requirements and create or extend native feature workspaces.
+title: "Feature: <scope or feature name>"
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Feature (lifecycle stage 3 of 8)
+
+        **Purpose:** Refine approved requirements, add acceptance behavior, group
+        them into features, and freeze a baseline.
+
+        **Input:** Approved `INTK-####-REQ-###.md` files and their non-governing
+        intake requirement-group context
+        **Output:** One or more `specs/<sequence>-<feature-slug>/spec.md` workspaces
+        **Required skills (in order):** `requirement-refinement`, `open-question-handling`,
+        `gherkin-authoring`, `feature-grouping`, `spec-compilation`
+        **Validation:** `python scripts/compile_specs.py --check` then
+        `python scripts/validate_specs.py`
+        **Human gate:** Gate 2 (customer and architect)
+        **Next handoff:** One draft Design issue per approved feature workspace
+
+  - type: dropdown
+    id: classification
+    attributes:
+      label: Increment classification
+      description: Initial classification; confirm it against repository context before authoring.
+      options:
+        - needs-clarification
+        - extend-existing
+        - create-new
+        - split-requirement
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements-in-scope
+    attributes:
+      label: Requirements in scope
+      description: List reviewed requirement identifiers (or an explicit range) with links.
+    validations:
+      required: true
+
+  - type: textarea
+    id: known-ambiguities
+    attributes:
+      label: Known ambiguities or pending decisions
+      description: Include the requirement identifier for each open question.
+    validations:
+      required: false
+
+  - type: input
+    id: planned-completion
+    attributes:
+      label: Planned completion
+      description: Expected date for the Gate 2 review.
+      placeholder: "yyyy-mm-dd"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      description: Exact current position in the Feature workflow (matches templates/tracking/project-definition.yml stages[feature].stage_status_flow).
+      options:
+        - Handoff Draft
+        - Ready for Refinement
+        - Refining
+        - Questions Pending
+        - Grouping
+        - Compiling
+        - Validating
+        - Gate 2 Review
+        - Changes Requested
+        - Approved
+      default: 1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      description: The human gate that applies to this stage.
+      options:
+        - Gate 2
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: downstream-handoff
+    attributes:
+      label: Downstream handoff
+      description: Link each Design issue opened for an approved FEAT, or state that none exist yet.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: Every scoped requirement is reviewed and merged on the default branch.
+          required: false
+        - label: The scope is explicit and closed for this run.
+          required: false
+        - label: Epic and feature boundaries were derived independently; intake requirement groups were used only for navigation.
+          required: false
+        - label: Known ambiguities are listed above.
+          required: false
+        - label: python scripts/compile_specs.py --check passes with no drift.
+          required: false
+        - label: python scripts/validate_specs.py passes.
+          required: false
+        - label: A feature-specification pull request is open for human review and is not merged by the agent.
+          required: false
+        - label: Gate 2 (customer and architect) is approved and recorded on this issue.
+          required: false
