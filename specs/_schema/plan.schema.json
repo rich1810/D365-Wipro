@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/specs/_schema/plan.schema.json",
+  "title": "Feature workspace technical plan front-matter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "implements_feature",
+    "source_spec_hash",
+    "repository_context_hash",
+    "plan_hash",
+    "status"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^DES-[0-9]{2}$" },
+    "implements_feature": { "type": "string", "pattern": "^FEAT-[0-9]{2}$" },
+    "source_spec_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "repository_context_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "reviewed", "approved", "building", "done"]
+    }
+  }
+}

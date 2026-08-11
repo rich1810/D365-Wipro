@@ -1,0 +1,282 @@
+# SDD conventions - shared by the agents and validators across all stages.
+
+# --- Craft / Spec Kit compatibility ---
+craft_profile_version: "0.12.0"
+spec_kit_version: "0.12.4"
+spec_kit_integration: copilot
+spec_kit_script_type: ps
+repository_context: "specs/_index/repository-context.json"
+spec_context: ".specify/context/spec-context.json"
+plan_context: ".specify/context/plan-context.json"
+task_context: ".specify/context/task-context.json"
+
+# --- Phase 1: Requirement Intake ---
+req_id_format: "INTK-%04d-REQ-%03d"          # intake-scoped; parallel-safe
+intake_batch_format: "INTK-%04d"             # zero-padded, sequential intake-batch id
+intake_registry: "intake/_index.md"          # INTK-#### -> folder / issue / REQ range
+intake_workspace_format: "specs/intakes/INTK-%04d"
+requirement_path_format: "specs/intakes/INTK-%04d/requirements/INTK-%04d-REQ-%03d.md"
+requirement_index_name: "requirements.md"
+requirement_group_id_format: "INTK-%04d-GRP-%02d"
+requirement_group_registry_name: "requirement-groups.yml"
+requirement_group_schema: "specs/_schema/requirement-groups.schema.json"
+
+# --- Phase 2: Spec Authoring & Refinement ---
+baseline_tag_format: "reqs-baseline-v%d"
+nfr_categories: [agent_response, page_load, crud_action, availability, throughput]
+scenario_kinds: [happy, negative, boundary]
+security_requires_negative: true            # a security REQ without a negative scenario FAILS
+status_flow: [draft, reviewed, approved, building, done]   # forward-only transitions
+feature_id_format: "FEAT-%02d"
+epic_id_format: "EPIC-%02d"
+feature_workspace_format: "specs/%03d-<feature-slug>"
+feature_spec_name: "spec.md"
+requirement_types: [functional, non-functional, integration, data, security, agentic]
+modules: [Sales, Service, ContactCenter, PowerPlatform, Azure, CopilotStudio]
+priorities: [Must, Should, Could, Wont]     # MoSCoW
+
+# --- Phase 3: Design & Solution Decomposition ---
+des_id_format: "DES-%02d"
+design_component_id_format: "DES-%02d-CMP-%03d"
+technical_plan_name: "plan.md"
+task_index_name: "tasks.md"
+dev_id_format: "DEV-%04d"
+dev_path_format: "development/DEV-%04d.md"
+dev_executor_types: [agent, human, hybrid]
+dev_execution_hosts: [local_interactive, cloud_or_local]
+dev_status_flow: [draft, ready, blocked, in_progress, waiting_for_human, in_review, completed, superseded, cancelled]
+decision_axes: [logic_tier, data_residency, alm_boundary, security, integration, environment, ux_surface, observability, batch_processing, reporting]
+decision_axes_baseline: [logic_tier, data_residency, alm_boundary, security, integration, environment, ux_surface, observability]  # minimum required of legacy designs
+legacy_designs: []                               # add existing designs only when preserving a documented legacy contract
+legacy_payload_designs: []                       # add existing designs only when preserving a documented legacy contract
+logic_tiers: [config, low_code, pro_code]        # declarative-first order
+escalation_requires_rationale: true              # a low_code/pro_code choice without a recorded reason FAILS
+observability_required: true                     # a DES with no observability block FAILS
+
+# Component-type taxonomy — every entry in a DES `solution.components` list is
+# tagged with one component_type so the design decomposes into granular, buildable
+# units (one buildable component per type) instead of a single opaque blob. Format
+# is `<family>_<type>` (snake_case). Some ids are parameterised: `config_ai_<type>_<type>`
+# (Dataverse AI-agent config), `mcs_<agentname>_<type>` (Copilot Studio), `az_ai_<type>_<type>`
+# (Azure AI), `code_webres_<type>` (web-resource kind). See specs/_schema/component-types.md
+# for the family->design-axis mapping. Extend this list as the pattern evolves.
+component_type_families: [schema_, config_, uiux_, flow_, code_, mcs_, sec_, az_, bi_, alm_, integ_]
+implementation_scopes:
+  - repository_only
+  - repository_and_dataverse_environment
+  - repository_and_dataverse_solution
+component_implementation_scopes:
+  repository_only:
+    - az_*
+    - bi_*
+  repository_and_dataverse_environment:
+    - sec_business_unit
+    - sec_team
+    - config_queue
+    - config_audit
+  repository_and_dataverse_solution:
+    - schema_*
+    - config_*
+    - uiux_*
+    - flow_*
+    - code_*
+    - mcs_*
+    - sec_*
+    - integ_*
+component_identity_fields:
+  repository_and_dataverse_solution: schema_name
+  repository_and_dataverse_environment: record_name
+component_types:
+  # schema_ — Dataverse data model
+  - schema_table
+  - schema_column
+  - schema_relationship
+  - schema_choice
+  - schema_key
+  # config_ — declarative Dynamics configuration (no code, no flow)
+  - config_sla
+  - config_arc                 # automatic record creation/update rule
+  - config_bpf                 # business process flow
+  - config_business_rule
+  - config_routing_rule
+  - config_queue
+  - config_assignment_rule
+  - config_dup_detection
+  - config_env_variable
+  - config_audit               # Dataverse auditing configuration
+  - config_ai_*                # config_ai_<type>_<type> — Dataverse AI-agent config
+  # uiux_ — model-driven UI surfaces
+  - uiux_form
+  - uiux_view
+  - uiux_dashboard
+  - uiux_chart
+  - uiux_sitemap
+  - uiux_app
+  # flow_ — low-code automation
+  - flow_cloud
+  # code_ — pro-code components
+  - code_plugin
+  - code_custom_api
+  - code_pcf
+  - code_webres_*              # code_webres_<type> — js | html | css | ...
+  # mcs_ — Copilot Studio
+  - mcs_*                      # mcs_<agentname>_<type> — topic | action | knowledge | ...
+  # sec_ — security
+  - sec_role
+  - sec_field_profile
+  - sec_business_unit
+  - sec_team
+  # az_ — Azure infrastructure / compute (Bicep)
+  - az_apim
+  - az_service_bus
+  - az_key_vault
+  - az_function_app
+  - az_func_scheduled          # timer-triggered Azure Function (batch, no Power Automate)
+  - az_app_insights
+  - az_event_grid
+  - az_ai_*                    # az_ai_<type>_<type> — Azure AI components
+  # bi_ — Power BI reporting
+  - bi_dataset
+  - bi_report
+  # integ_ — external integration wiring
+  - integ_connector
+  - integ_connection_ref
+# --- Phase 3: Component-type SKILL LIBRARY (map + required-payload schema) ---
+# Single source of truth for the skill library. Read by BOTH the prompt files
+# (guidance: which skill to load per component) AND the validators (enforcement:
+# which fields a design item must carry). A skill is a DOMAIN grouping layered
+# over the component_type prefix — some `config_*` types are re-homed by concern
+# (config_audit -> dataverse-security, config_env_variable -> alm-packaging,
+# config_ai_* -> dataverse-ai). Skills remain in D365 Solution Craft and are
+# discovered through its registered build-skill location. Use the skill name in
+# `component_type_skills`; each skill has a thin `SKILL.md` router plus one
+# `<component_type>.md` deep reference per covered type.
+# Wildcard members (e.g. `config_ai_*`) match the parameterised component_types.
+component_type_skills:
+  dataverse-table:      [schema_table, schema_column, schema_relationship, schema_choice, schema_key]
+  dataverse-config:     [config_sla, config_arc, config_bpf, config_business_rule, config_routing_rule, config_queue, config_assignment_rule, config_dup_detection]
+  dataverse-security:   [sec_role, sec_field_profile, sec_business_unit, sec_team, config_audit]
+  power-automate-flow:  [flow_cloud]
+  model-driven-ui:      [uiux_form, uiux_view, uiux_dashboard, uiux_chart, uiux_sitemap, uiux_app]
+  alm-packaging:        [config_env_variable]
+  integration-wiring:   [integ_connector, integ_connection_ref]  # integ_connector = a CUSTOM connector you author (OpenAPI + auth + policies); standard/certified connectors need only integ_connection_ref
+  dataverse-ai:         [config_ai_*]
+  dataverse-procode:    [code_plugin, code_custom_api, code_pcf, code_webres_*]
+  copilot-studio-agent: [mcs_*]
+  azure-infra:          [az_apim, az_service_bus, az_key_vault, az_function_app, az_func_scheduled, az_app_insights, az_event_grid, az_ai_*]
+  power-bi-reporting:   [bi_dataset, bi_report]
+
+# Rollout phases for the externally registered Craft build-skill library.
+skill_phases:
+  A: [dataverse-table, dataverse-config, dataverse-security, power-automate-flow, model-driven-ui, alm-packaging, integration-wiring]
+  B: [dataverse-ai, dataverse-procode, copilot-studio-agent, azure-infra, power-bi-reporting]
+
+# Per-component_type REQUIRED PAYLOAD — the minimum fields a DES `FILL:solution`
+# design item must declare (in its `data_model` entry) so the mapped skill can
+# execute and `validate_design.py` can enforce it (Step validate-payload). A type
+# with no explicit entry falls back to `_default`. Every component always needs
+# `name` + `satisfies` (the REQ id(s) it traces to). Parameterised `*` types use
+# the wildcard key. Phase-B types not yet detailed rely on `_default` for now.
+component_type_payloads:
+  _default:              {required: [name, satisfies]}
+  # schema_ (dataverse-table)
+  schema_table:          {required: [name, table, operation, ownership, primary_name, columns, satisfies]}
+  schema_column:         {required: [name, table, data_type, required_level, satisfies]}
+  schema_relationship:   {required: [name, table, relationship_type, related_table, lookup_column, referenced_attribute, required_level, cascade_configuration, satisfies]}
+  schema_choice:         {required: [name, options, satisfies]}
+  schema_key:            {required: [name, table, key_columns, satisfies]}
+  # config_ (dataverse-config)
+  config_sla:            {required: [name, applies_to, kpi, satisfies]}
+  config_arc:            {required: [name, source, target, satisfies]}
+  config_bpf:            {required: [name, table, stages, satisfies]}
+  config_business_rule:  {required: [name, table, condition, action, satisfies]}
+  config_routing_rule:   {required: [name, queue, criteria, satisfies]}
+  config_queue:          {required: [name, queue_type, satisfies]}
+  config_assignment_rule: {required: [name, queue, logic, satisfies]}
+  config_dup_detection:  {required: [name, table, match_criteria, satisfies]}
+  # sec_ + governance (dataverse-security)
+  sec_role:              {required: [name, privileges, satisfies]}
+  sec_field_profile:     {required: [name, protected_columns, grantee_roles, satisfies]}
+  sec_business_unit:     {required: [name, parent, satisfies]}
+  sec_team:              {required: [name, business_unit, roles, satisfies]}
+  config_audit:          {required: [name, scope, satisfies]}
+  # flow_ (power-automate-flow)
+  flow_cloud:            {required: [name, trigger, actions, satisfies]}
+  # uiux_ (model-driven-ui)
+  uiux_form:             {required: [name, table, form_type, sections, satisfies]}
+  uiux_view:             {required: [name, table, filter, columns, satisfies]}
+  uiux_dashboard:        {required: [name, components, roles, satisfies]}
+  uiux_chart:            {required: [name, table, series, satisfies]}
+  uiux_sitemap:          {required: [name, app, areas, satisfies]}
+  uiux_app:              {required: [name, app_type, tables, satisfies]}
+  # Environment-specific configuration separation (alm-packaging)
+  config_env_variable:   {required: [name, data_type, satisfies]}
+  # integ_ (integration-wiring)
+  integ_connector:       {required: [name, connector_kind, api_spec, auth, satisfies]}
+  integ_connection_ref:  {required: [name, connector, satisfies]}
+
+# Skill-level task profiles. Every component type resolves through
+# component_type_skills to exactly one profile. The generated task context
+# combines this profile with the approved plan payload and the skill's
+# component-specific guidance.
+component_task_profiles:
+  dataverse-table:
+    executor_default: agent
+    target_roots: [src/solutions]
+    validation_kinds: [payload_conformance, solution_schema, import_smoke]
+    evidence: [changed_solution_paths, validation_results, import_verification]
+  dataverse-config:
+    executor_default: hybrid
+    target_roots: [src/solutions]
+    validation_kinds: [payload_conformance, solution_schema, import_smoke, runtime_verification]
+    evidence: [changed_solution_paths, validation_results, environment_verification]
+  dataverse-security:
+    executor_default: hybrid
+    target_roots: [src/solutions, config]
+    validation_kinds: [payload_conformance, least_privilege_review, import_smoke]
+    evidence: [changed_solution_paths, privilege_matrix, reviewer_evidence]
+  power-automate-flow:
+    executor_default: hybrid
+    target_roots: [src/solutions]
+    validation_kinds: [payload_conformance, flow_definition, connection_reference, runtime_verification]
+    evidence: [changed_solution_paths, validation_results, run_history]
+  model-driven-ui:
+    executor_default: hybrid
+    target_roots: [src/solutions]
+    validation_kinds: [payload_conformance, solution_schema, accessibility_review, runtime_verification]
+    evidence: [changed_solution_paths, screenshots, reviewer_evidence]
+  alm-packaging:
+    executor_default: agent
+    target_roots: [src/solutions, config]
+    validation_kinds: [payload_conformance, solution_pack, dependency_check]
+    evidence: [package_paths, validation_results, dependency_report]
+  integration-wiring:
+    executor_default: hybrid
+    target_roots: [src/solutions, config]
+    validation_kinds: [payload_conformance, api_contract, connection_reference, security_review]
+    evidence: [changed_paths, contract_validation, connection_verification]
+  dataverse-ai:
+    executor_default: hybrid
+    target_roots: [src/solutions, config]
+    validation_kinds: [payload_conformance, grounding_review, safety_review, runtime_verification]
+    evidence: [changed_paths, evaluation_results, reviewer_evidence]
+  dataverse-procode:
+    executor_default: agent
+    target_roots: [src/plugins, src/pcf, src/webresources]
+    validation_kinds: [payload_conformance, build, unit_test, registration_conformance]
+    evidence: [changed_paths, build_results, test_results]
+  copilot-studio-agent:
+    executor_default: hybrid
+    target_roots: [src/copilot-studio]
+    validation_kinds: [payload_conformance, yaml_validation, conversation_evaluation, publish_verification]
+    evidence: [changed_paths, validation_results, evaluation_results]
+  azure-infra:
+    executor_default: agent
+    target_roots: [infra]
+    validation_kinds: [payload_conformance, bicep_build, what_if, security_review]
+    evidence: [changed_paths, build_results, what_if_results]
+  power-bi-reporting:
+    executor_default: hybrid
+    target_roots: [src/power-bi]
+    validation_kinds: [payload_conformance, model_validation, visual_review, security_review]
+    evidence: [changed_paths, validation_results, reviewer_evidence]

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/specs/_schema/spec.schema.json",
+  "title": "Feature workspace specification front-matter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "slug",
+    "epic",
+    "member_reqs",
+    "repository_context_hash",
+    "spec_hash",
+    "status"
+  ],
+  "properties": {
+    "id": { "type": "string", "pattern": "^FEAT-[0-9]{2}$" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "epic": { "type": "string", "pattern": "^EPIC-[0-9]{2}$" },
+    "member_reqs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^INTK-[0-9]{4}-REQ-[0-9]{3}$" }
+    },
+    "repository_context_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "spec_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "reviewed", "approved", "building", "done"]
+    }
+  }
+}

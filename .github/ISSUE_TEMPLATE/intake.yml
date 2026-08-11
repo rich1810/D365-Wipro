@@ -1,0 +1,128 @@
+name: Intake
+description: Register source evidence and convert supported documents for requirement extraction.
+title: "Intake: <customer or workstream> <yyyy-mm-dd>"
+labels: ["intake"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Intake (lifecycle stage 1 of 8)
+
+        **Purpose:** Register source evidence, convert supported files, preserve
+        provenance, and establish an auditable intake batch.
+
+        **Input:** Files under `intake/<customer>/<date>/`
+        **Output:** `INTK-####` row in `intake/_index.md` and converted evidence
+        **Required skill:** `intake-conversion`
+        **Validation:** Source path, conversion result, location references,
+        SHA-256, and registry completeness
+        **Human gate:** Intake acceptance
+        **Next handoff:** Requirement issue linked to the accepted `INTK-####`
+
+  - type: input
+    id: customer-workstream
+    attributes:
+      label: Customer / Workstream
+      description: Customer, solution, or workstream this intake batch belongs to.
+      placeholder: "Example: Contoso Customer Service"
+    validations:
+      required: true
+
+  - type: input
+    id: intake-path
+    attributes:
+      label: Intake path
+      description: Exact repository-relative folder committed for this batch.
+      placeholder: "intake/<customer>/<yyyy-mm-dd>/"
+    validations:
+      required: true
+
+  - type: textarea
+    id: source-files
+    attributes:
+      label: Source documents and links
+      description: List every source file committed under the intake path, with a clickable repository link for each.
+      placeholder: |
+        - intake/<customer>/<yyyy-mm-dd>/requirements.docx (link)
+        - intake/<customer>/<yyyy-mm-dd>/process-notes.pdf (link)
+    validations:
+      required: true
+
+  - type: input
+    id: artifact-id
+    attributes:
+      label: Artifact ID
+      description: "Format: INTK-####. Leave blank if the agent assigns the next sequential identifier."
+      placeholder: "INTK-0001"
+    validations:
+      required: false
+
+  - type: textarea
+    id: known-ambiguities
+    attributes:
+      label: Known ambiguities, priorities, or exclusions
+      description: Record uncertainty rather than resolving it by assumption.
+    validations:
+      required: false
+
+  - type: input
+    id: planned-completion
+    attributes:
+      label: Planned completion
+      description: Expected date for intake acceptance.
+      placeholder: "yyyy-mm-dd"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      description: Exact current position in the Intake workflow (matches templates/tracking/project-definition.yml stages[intake].stage_status_flow).
+      options:
+        - Received
+        - Registering
+        - Converting Evidence
+        - Evidence Review
+        - Questions Pending
+        - Accepted
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      description: The human gate that applies to this stage.
+      options:
+        - Intake acceptance
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: downstream-handoff
+    attributes:
+      label: Downstream handoff
+      description: Link to the Requirement issue created once this intake batch is accepted, or state that it is not yet created.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: Source documents are committed under the intake path.
+          required: false
+        - label: The document list above is complete.
+          required: false
+        - label: Scanned, image-only, empty, or garbled files are identified for escalation.
+          required: false
+        - label: The intake batch is registered in intake/_index.md with a sequential INTK-#### id.
+          required: false
+        - label: Intake acceptance gate is approved and recorded on this issue.
+          required: false
+        - label: The downstream Requirement issue exists and is linked above.
+          required: false

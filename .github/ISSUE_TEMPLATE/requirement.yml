@@ -1,0 +1,122 @@
+name: Requirement
+description: Convert an accepted intake batch into atomic, testable requirements.
+title: "Requirement: <customer or workstream> <yyyy-mm-dd>"
+labels: ["requirement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Requirement (lifecycle stage 2 of 8)
+
+        **Purpose:** Convert accepted evidence into atomic, testable, traceable
+        requirements.
+
+        **Input:** Accepted `INTK-####` and converted evidence
+        **Output:** `specs/intakes/INTK-####/requirement-groups.yml` plus
+        `specs/intakes/INTK-####/requirements/INTK-####-REQ-###.md`
+        **Required skills (in order):** `intake-traceability` to stamp and verify
+        the intake relationship, then `atomic-requirement-authoring`
+        **Validation:** `python scripts/validate_reqs.py`
+        **Human gate:** Requirement review
+        **Next handoff:** Draft Feature issue containing approved requirement paths and links
+
+  - type: input
+    id: intake-id
+    attributes:
+      label: Upstream Intake ID and link
+      description: The accepted INTK-#### this run is based on, with a clickable issue or file link.
+      placeholder: "INTK-0001 (link)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence-paths
+    attributes:
+      label: Evidence paths
+      description: Exact repository-relative paths to the converted evidence used for extraction.
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What this requirement-authoring run must produce.
+    validations:
+      required: true
+
+  - type: textarea
+    id: known-ambiguities
+    attributes:
+      label: Known ambiguities, priorities, or exclusions
+      description: Record uncertainty rather than resolving it by assumption.
+    validations:
+      required: false
+
+  - type: input
+    id: planned-completion
+    attributes:
+      label: Planned completion
+      description: Expected date for requirement review.
+      placeholder: "yyyy-mm-dd"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      description: Exact current position in the Requirement workflow (matches templates/tracking/project-definition.yml stages[requirement].stage_status_flow).
+      options:
+        - Handoff Draft
+        - Ready for Drafting
+        - Drafting
+        - Questions Pending
+        - Validating
+        - Requirement Review
+        - Changes Requested
+        - Approved
+      default: 1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      description: The human gate that applies to this stage.
+      options:
+        - Requirement review
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: downstream-handoff
+    attributes:
+      label: Downstream handoff
+      description: Link to the Feature issue that will consume the approved requirements, or state that it is not yet created.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: The upstream INTK-#### is accepted and linked above.
+          required: false
+        - label: Every extracted requirement traces to one source location.
+          required: false
+        - label: Requirement groups are evidence-grounded, non-empty, deterministically ordered, and approved with the REQs.
+          required: false
+        - label: Every atomic REQ references exactly one valid group from the same intake without replacing its own provenance.
+          required: false
+        - label: Requirement identifiers are sequential within the intake workspace with no gaps.
+          required: false
+        - label: python scripts/validate_reqs.py passes.
+          required: false
+        - label: A pull request is open for human review and is not merged by the agent.
+          required: false
+        - label: Requirement review gate is approved and recorded on this issue.
+          required: false

@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/templates/tracking/project-definition.schema.json",
+  "title": "D365 Solution Craft tracking definition",
+  "description": "Structural contract for templates/tracking/project-definition.yml. This schema enforces shape, types, enums, and patterns. Cross-reference rules that JSON Schema cannot express (for example: every stage.gates id resolves to a gates[].id, every field.options_ref resolves to a real list, or every stage_status_flow value is non-empty and unique) are enforced deterministically by scripts/validate_tracking.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "library_version", "stages", "status", "fields", "gates", "dashboards", "traceability", "automation"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 2 },
+    "library_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "stages": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "status": { "$ref": "#/$defs/status" },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/field" }
+    },
+    "gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/gate" }
+    },
+    "dashboards": { "$ref": "#/$defs/dashboards" },
+    "traceability": { "$ref": "#/$defs/traceability" },
+    "automation": { "$ref": "#/$defs/automation" }
+  },
+  "$defs": {
+    "hexColor": {
+      "type": "string",
+      "pattern": "^[0-9A-Fa-f]{6}$",
+      "description": "GitHub label color, six-digit hex without a leading '#'."
+    },
+    "projectColor": {
+      "type": "string",
+      "enum": ["GRAY", "BLUE", "GREEN", "YELLOW", "ORANGE", "RED", "PINK", "PURPLE"],
+      "description": "The fixed GitHub Projects v2 single-select option color palette."
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "order", "purpose", "label", "artifact_id_format", "issue_form", "input", "output", "skills", "stage_status_flow", "validation", "gates", "next_stage"],
+      "properties": {
+        "id": { "type": "string", "enum": ["intake", "requirement", "feature", "design", "development", "test", "release", "operate"] },
+        "name": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "label": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "color", "description"],
+          "properties": {
+            "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+            "color": { "$ref": "#/$defs/hexColor" },
+            "description": { "type": "string", "minLength": 1, "maxLength": 100 }
+          }
+        },
+        "artifact_id_format": { "type": "string", "pattern": "^[A-Z]+-%0[0-9]+d(?:-[A-Z]+-%0[0-9]+d)*$" },
+        "issue_form": { "type": "string", "pattern": "^[a-z][a-z0-9-]*\\.yml$" },
+        "input": { "type": "string", "minLength": 1 },
+        "output": { "type": "string", "minLength": 1 },
+        "skills": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+        },
+        "skills_note": { "type": "string" },
+        "stage_status_flow": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "validation": { "type": "string", "minLength": 1 },
+        "gates": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "next_stage": {
+          "type": ["string", "null"],
+          "enum": ["intake", "requirement", "feature", "design", "development", "test", "release", "operate", null]
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "type", "options", "transitions", "done_requires"],
+      "properties": {
+        "field": { "type": "string", "const": "Status" },
+        "type": { "type": "string", "const": "single_select" },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "color", "description"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "color": { "$ref": "#/$defs/projectColor" },
+              "description": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string", "minLength": 1 },
+              "to": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "done_requires": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "description"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["single_select", "text", "date", "number", "assignee", "iteration"] },
+        "description": { "type": "string", "minLength": 1 },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "color"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "color": { "$ref": "#/$defs/projectColor" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "options_ref": {
+          "type": "string",
+          "description": "Path within this document to a reused option list, e.g. 'status.options' or 'gates[].name'."
+        }
+      },
+      "oneOf": [
+        {
+          "properties": { "type": { "const": "single_select" } },
+          "anyOf": [ { "required": ["options"] }, { "required": ["options_ref"] } ]
+        },
+        {
+          "not": { "properties": { "type": { "const": "single_select" } }, "required": ["type"] }
+        }
+      ]
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "stage", "reviewer"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "stage": { "type": "string", "enum": ["intake", "requirement", "feature", "design", "development", "test", "release", "operate"] },
+        "reviewer": { "type": "string", "minLength": 1 },
+        "applies_to": { "type": "string" }
+      }
+    },
+    "dashboards": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary_metrics", "views", "stage_views"],
+      "properties": {
+        "summary_metrics": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "definition"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "definition": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "views": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "layout"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+              "name": { "type": "string", "minLength": 1 },
+              "layout": { "type": "string", "enum": ["table", "board", "roadmap"] },
+              "filter": { "type": "string" },
+              "group": { "type": "string" },
+              "group_by": { "type": "string" },
+              "sort": { "type": "string" },
+              "columns": { "type": "array", "items": { "type": "string" } },
+              "card_fields": { "type": "array", "items": { "type": "string" } },
+              "date_start": { "type": "string" },
+              "date_end": { "type": "string" }
+            }
+          }
+        },
+        "stage_views": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "filter_field", "columns"],
+            "properties": {
+              "name": { "type": "string", "const": "Stage Drill-down" },
+              "filter_field": { "type": "string", "const": "Lifecycle Stage" },
+              "columns": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "traceability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chain", "chain_description", "layers", "required_issue_links"],
+      "properties": {
+        "chain": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": { "type": "string", "enum": ["intake", "requirement", "feature", "design", "development", "test", "release", "operate"] }
+        },
+        "chain_description": { "type": "string", "minLength": 1 },
+        "layers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["layer", "mechanism", "purpose"],
+            "properties": {
+              "layer": { "type": "string", "minLength": 1 },
+              "mechanism": { "type": "string", "minLength": 1 },
+              "purpose": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "required_issue_links": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rules", "manual_only"],
+      "properties": {
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "description", "trigger", "workflow_template"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+              "name": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 },
+              "trigger": { "type": "string", "minLength": 1 },
+              "workflow_template": { "type": "string", "pattern": "^[a-zA-Z0-9_.-]+\\.yml$" }
+            }
+          }
+        },
+        "manual_only": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

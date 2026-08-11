@@ -1,0 +1,36 @@
+profile: d365-solution-craft
+profile_version: "0.12.0"
+spec_kit:
+  package: specify-cli
+  version: "0.12.4"
+  integration: copilot
+  script_type: ps
+  install_command: "uv tool install specify-cli==0.12.4 --force"
+  verify_command: "specify version"
+runtime_policy:
+  online_only: true
+  allow_unpinned_version: false
+  allow_automatic_upgrade: false
+canonical_artifacts:
+  intake_registry: intake/_index.md
+  intake_workspace: specs/intakes/INTK-####/
+  requirement_group_registry: specs/intakes/INTK-####/requirement-groups.yml
+  requirement_artifact: specs/intakes/INTK-####/requirements/INTK-####-REQ-###.md
+  requirement_index: specs/intakes/INTK-####/requirements.md
+  feature_workspace: specs/<sequence>-<feature-slug>/
+  specification: spec.md
+  technical_plan: plan.md
+  task_index: tasks.md
+  development_artifact: development/DEV-####.md
+generated_contexts:
+  canonical: specs/_index/repository-context.json
+  specification: .specify/context/spec-context.json
+  plan: .specify/context/plan-context.json
+  tasks: .specify/context/task-context.json
+human_gates:
+  - intake_acceptance
+  - requirement_review
+  - feature_gate_2
+  - architecture_gate
+  - development_planning_review
+  - code_or_configuration_review

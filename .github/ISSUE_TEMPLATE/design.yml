@@ -1,0 +1,115 @@
+name: Design
+description: Produce the authoritative technical plan for one approved feature workspace.
+title: "Design: FEAT-## <feature name>"
+labels: ["design"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Design (lifecycle stage 4 of 8)
+
+        **Purpose:** Ground the implementation approach, make architecture
+        decisions, decompose buildable components, and define user experience
+        where applicable.
+
+        **Input:** One approved `specs/<sequence>-<feature-slug>/spec.md`
+        **Output:** The same workspace's `plan.md` with granular typed components
+        **Required skills (in order):** `decision-axes`, `grounded-architecture`,
+        `component-decomposition`, `observability-design`, `design-compilation`;
+        use `open-question-handling` for recorded decisions
+        **Validation:** `python scripts/compile_design.py --check` then
+        `python scripts/validate_design.py`
+        **Human gate:** Gate A (architect); customer behavior approval remains in `spec.md`
+        **Next handoff:** A draft Development Planning issue
+
+  - type: input
+    id: feature-spec
+    attributes:
+      label: Feature specification
+      description: Path and link to the approved FEAT this design implements.
+      placeholder: "specs/001-email-servicing/spec.md (link)"
+    validations:
+      required: true
+
+  - type: input
+    id: design-id
+    attributes:
+      label: Design identifier
+      description: "Format: DES-##. Leave blank if the agent assigns the next sequential identifier."
+      placeholder: "DES-01"
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes for the agent
+      description: Environment constraints, known decisions, or exclusions.
+    validations:
+      required: false
+
+  - type: input
+    id: planned-completion
+    attributes:
+      label: Planned completion
+      description: Expected date for Gate A/B review.
+      placeholder: "yyyy-mm-dd"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      description: Exact current position in the Design workflow (matches templates/tracking/project-definition.yml stages[design].stage_status_flow).
+      options:
+        - Handoff Draft
+        - Ready for Design
+        - Grounding
+        - Designing
+        - Questions Pending
+        - Compiling
+        - Validating
+        - Gate A Review
+        - Changes Requested
+        - Approved
+      default: 1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      description: The human gate(s) that apply to this stage.
+      options:
+        - Gate A
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: downstream-handoff
+    attributes:
+      label: Downstream handoff
+      description: Link the Development Planning issue created after plan approval and merge.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: One approved feature specification and its member requirements are used.
+          required: false
+        - label: Every plan component carries one stable component ID, one component_type, its exact required payload, and satisfies links.
+          required: false
+        - label: python scripts/compile_design.py --check passes with no drift.
+          required: false
+        - label: python scripts/validate_design.py passes.
+          required: false
+        - label: A design pull request is open for review and is not merged by the agent.
+          required: false
+        - label: Gate A (architect) approval for plan.md is recorded on this issue.
+          required: false

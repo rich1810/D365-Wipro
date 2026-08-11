@@ -1,0 +1,123 @@
+name: Release
+description: Package, approve, deploy, and verify an approved implementation release.
+title: "Release: <release id/version>"
+labels: ["release"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Release (lifecycle stage 7 of 8)
+
+        **Purpose:** Package, approve, deploy, and verify an approved
+        implementation release.
+
+        **Input:** Approved build and test evidence
+        **Output:** Deployment package, release record, deployment evidence, and
+        rollback record
+        **Required skill:** to be defined as reusable release and deployment
+        skills are published (see `taxonomy/component-types.yml` `skill_phases`)
+        **Validation:** Package, dependency, environment, deployment, smoke, and
+        rollback-readiness checks
+        **Human gate:** Release approval
+        **Next handoff:** Operate issue or operational ownership record
+
+  - type: input
+    id: release-id
+    attributes:
+      label: Release ID / version
+      placeholder: "REL-0001"
+    validations:
+      required: true
+
+  - type: textarea
+    id: included-changes
+    attributes:
+      label: Included changes and source PRs
+      description: Test issues, components, and pull requests included in this release.
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Example: UAT, Production"
+    validations:
+      required: true
+
+  - type: textarea
+    id: package-dependencies
+    attributes:
+      label: Package links and dependencies
+      description: Deployment package location and any deployment dependencies.
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback-plan
+    attributes:
+      label: Deployment window and rollback plan
+    validations:
+      required: false
+
+  - type: input
+    id: planned-completion
+    attributes:
+      label: Planned completion
+      description: Expected date for release approval.
+      placeholder: "yyyy-mm-dd"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      description: Exact current position in the Release workflow (matches templates/tracking/project-definition.yml stages[release].stage_status_flow).
+      options:
+        - Release Planning
+        - Package Preparation
+        - Package Validation
+        - Deployment Review
+        - Ready to Deploy
+        - Deploying
+        - Post-Deployment Verification
+        - Released
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      description: The human gate that applies to this stage.
+      options:
+        - Release approval
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: downstream-handoff
+    attributes:
+      label: Downstream handoff
+      description: Link to the Operate issue or operational ownership record, or state that it is not yet created.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: All included changes and their test approvals are linked above.
+          required: false
+        - label: Package, dependency, environment, deployment, smoke, and rollback-readiness checks pass.
+          required: false
+        - label: Release approval gate is approved and recorded on this issue.
+          required: false
+        - label: Deployment result and post-deployment verification are recorded on this issue.
+          required: false
+        - label: The downstream Operate issue or ownership record exists and is linked above.
+          required: false

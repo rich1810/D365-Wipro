@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/.d365/development-resources.schema.json",
+  "title": "D365 development resources and deterministic routing",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "authentication_policy", "capability_contract", "resources", "routing", "validation"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "authentication_policy": {
+      "enum": ["reuse_if_valid", "always_prompt"]
+    },
+    "capability_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "schema_path"],
+      "properties": {
+        "path": { "const": ".d365/dataverse-web-api-capabilities.yml" },
+        "schema_path": { "const": ".d365/dataverse-web-api-capabilities.schema.json" }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "version", "authentication", "supported_execution_hosts", "preflight"],
+        "properties": {
+          "kind": { "enum": ["mcp", "endpoint", "cli", "sdk", "portal"] },
+          "version": { "type": "string", "minLength": 1 },
+          "version_policy": {
+            "enum": ["exact", "service_managed", "api_contract", "project_pinned"]
+          },
+          "authentication": {
+            "enum": ["none", "interactive_user", "host_managed"]
+          },
+          "supported_execution_hosts": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": ["local_interactive", "github_copilot_cloud"]
+            }
+          },
+          "server": { "type": "string", "minLength": 1 },
+          "endpoint": { "type": "string", "minLength": 1 },
+          "release_channel": { "enum": ["ga"] },
+          "command": { "type": "string", "minLength": 1 },
+          "ecosystem": { "type": "string", "minLength": 1 },
+          "package": { "type": "string", "minLength": 1 },
+          "tools": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "description": { "type": "string", "minLength": 1 },
+          "oauth_public_client": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider",
+              "client_id",
+              "tenant_id",
+              "redirect_uri",
+              "scope_suffix",
+              "token_cache"
+            ],
+            "properties": {
+              "provider": { "const": "msal_public_client" },
+              "client_id": { "type": "string", "minLength": 1 },
+              "tenant_id": { "type": "string", "minLength": 1 },
+              "redirect_uri": { "const": "http://localhost" },
+              "scope_suffix": { "const": "/user_impersonation" },
+              "token_cache": { "const": "memory_only" }
+            }
+          },
+          "preflight": { "$ref": "#/$defs/preflight" }
+        }
+      }
+    },
+    "routing": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["match", "rationale", "resources"],
+        "properties": {
+          "match": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "maxProperties": 1,
+            "properties": {
+              "component_id": { "type": "string", "pattern": "^DES-[0-9]{2}-CMP-[0-9]{3}$" },
+              "component_type": { "type": "string", "minLength": 1 },
+              "build_skill": { "type": "string", "minLength": 1 }
+            }
+          },
+          "rationale": { "type": "string", "minLength": 30 },
+          "resources": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "required": { "$ref": "#/$defs/assignments" },
+              "preferred": { "$ref": "#/$defs/assignments" },
+              "allowed": { "$ref": "#/$defs/assignments" },
+              "fallback": { "$ref": "#/$defs/assignments" }
+            },
+            "minProperties": 1
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["require_runtime_capability_probe", "destructive_operations", "capability_matrix"],
+      "properties": {
+        "require_runtime_capability_probe": {
+          "type": "array",
+          "items": { "enum": ["mcp"] },
+          "uniqueItems": true
+        },
+        "destructive_operations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["require_explicit_human_approval"],
+          "properties": {
+            "require_explicit_human_approval": { "const": true }
+          }
+        },
+        "capability_matrix": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "require_all_component_types",
+            "require_official_references_for_supported",
+            "require_portal_fallback_issue_evidence"
+          ],
+          "properties": {
+            "require_all_component_types": { "const": true },
+            "require_official_references_for_supported": { "const": true },
+            "require_portal_fallback_issue_evidence": { "const": true }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "guidance"],
+      "properties": {
+        "policy": {
+          "enum": ["not_applicable", "manual", "automatic_safe"]
+        },
+        "guidance": { "type": "string", "minLength": 1 },
+        "command": { "$ref": "#/$defs/command" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "policy": { "const": "automatic_safe" } },
+            "required": ["policy"]
+          },
+          "then": { "required": ["command"] },
+          "else": { "not": { "required": ["command"] } }
+        }
+      ]
+    },
+    "preflightStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "phase", "action", "behavior", "description"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "phase": {
+          "enum": [
+            "availability_version",
+            "capability",
+            "authentication",
+            "manual"
+          ]
+        },
+        "action": {
+          "enum": [
+            "command",
+            "mcp_server",
+            "mcp_tools",
+            "endpoint",
+            "package",
+            "interactive_auth",
+            "portal",
+            "human_confirmation"
+          ]
+        },
+        "behavior": {
+          "enum": ["automatic", "interactive", "manual"]
+        },
+        "description": { "type": "string", "minLength": 1 },
+        "command": { "$ref": "#/$defs/command" },
+        "expected": { "type": "string", "minLength": 1 },
+        "instructions": { "type": "string", "minLength": 1 },
+        "session_probe": { "$ref": "#/$defs/sessionProbe" },
+        "fresh_authentication": { "$ref": "#/$defs/freshAuthentication" }
+      }
+    },
+    "sessionProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instructions"],
+      "properties": {
+        "command": { "$ref": "#/$defs/command" },
+        "instructions": { "type": "string", "minLength": 1 }
+      }
+    },
+    "freshAuthentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["force_supported", "instructions"],
+      "properties": {
+        "force_supported": { "type": "boolean" },
+        "instructions": { "type": "string", "minLength": 1 }
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["installation", "steps"],
+      "properties": {
+        "installation": { "$ref": "#/$defs/installation" },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/preflightStep" }
+        }
+      }
+    },
+    "assignments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resource", "purpose", "rationale"],
+        "properties": {
+          "resource": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 20 },
+          "tools": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/.d365/authoring-targets.schema.json",
+  "title": "D365 authoring environments, solutions, targets, and routing",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "environments", "solutions", "targets", "routing"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "environments": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["environment_url", "environment_id", "authentication_mode"],
+        "properties": {
+          "environment_url": {
+            "type": "string",
+            "minLength": 1
+          },
+          "environment_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "authentication_mode": {
+            "const": "interactive_user"
+          },
+          "connection_alias": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "solutions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["environment", "unique_name", "publisher_name", "publisher_prefix"],
+        "properties": {
+          "environment": { "type": "string", "minLength": 1 },
+          "unique_name": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,99}$"
+          },
+          "display_name": { "type": "string", "minLength": 1 },
+          "publisher_name": { "type": "string", "minLength": 1 },
+          "publisher_prefix": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]{1,7}$"
+          }
+        }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "environment", "solution"],
+            "properties": {
+              "kind": { "const": "dataverse_solution" },
+              "environment": { "type": "string", "minLength": 1 },
+              "solution": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "environment"],
+            "properties": {
+              "kind": { "const": "dataverse_environment" },
+              "environment": { "type": "string", "minLength": 1 },
+              "description": { "type": "string", "minLength": 1 }
+            }
+          }
+        ]
+      }
+    },
+    "routing": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["match", "target"],
+        "properties": {
+          "match": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["component_id"],
+                "properties": {
+                  "component_id": {
+                    "type": "string",
+                    "pattern": "^DES-[0-9]{2}-CMP-[0-9]{3}$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["component_type"],
+                "properties": {
+                  "component_type": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*(?:\\*)?$"
+                  }
+                }
+              }
+            ]
+          },
+          "target": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "approved_by": { "type": "string", "minLength": 1 },
+          "approved_on": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          }
+        }
+      }
+    }
+  }
+}

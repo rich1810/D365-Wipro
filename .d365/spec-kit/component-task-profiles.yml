@@ -1,0 +1,14 @@
+version: "0.12.0"
+required_dev_sections:
+  - objective
+  - approved_component_payload
+  - implementation_scope
+  - prohibited_changes
+  - acceptance_checks
+  - validation
+  - evidence_required
+executor_types: [agent, human, hybrid]
+rules:
+  - One approved typed plan component maps to exactly one primary DEV artifact.
+  - Resolve component guidance through conventions.yml component_type_skills and component_task_profiles.
+  - Missing mappings, payloads, dependencies, checks, or evidence are hard failures.

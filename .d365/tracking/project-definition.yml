@@ -1,0 +1,540 @@
+# Canonical D365 Solution Craft tracking definition.
+#
+# This is the single source of truth for lifecycle tracking: the eight
+# lifecycle stages, the shared Status field, each stage's Stage Status flow,
+# GitHub labels, GitHub Project fields and their options, human gates,
+# dashboards, traceability, and automation boundaries.
+#
+# It is project-agnostic. Every example is generic; no customer, repository,
+# or implementation name appears here. Consumers copy this file unchanged
+# into their project (see docs/04 - Configure Project Tracking.md) and read
+# it with:
+#   - scripts/Test-D365TrackingReadiness.ps1  (read-only audit)
+#   - scripts/Configure-D365RepositoryTracking.ps1 (labels + repo prerequisites)
+#   - scripts/Configure-D365ProjectTracking.ps1     (Project fields/options)
+#   - scripts/validate_tracking.py                  (deterministic CI gate)
+#
+# Structural rules are enforced by project-definition.schema.json. Rules that
+# JSON Schema cannot express (for example: every stage.gates id resolves to a
+# gates[].id, or every field option color is valid for its field type) are
+# enforced deterministically by scripts/validate_tracking.py.
+
+schema_version: 2
+library_version: "0.12.0"
+
+# --- Lifecycle stages -------------------------------------------------------
+# One entry per issue type in the D365 delivery lifecycle. `order` fixes the
+# canonical stage sequence used by dashboards and the traceability chain.
+stages:
+  - id: intake
+    name: Intake
+    order: 1
+    purpose: >-
+      Register source evidence, convert supported files, preserve provenance,
+      and establish an auditable intake batch.
+    label: {name: intake, color: "FBCA04", description: "Intake registration and evidence conversion"}
+    artifact_id_format: "INTK-%04d"
+    issue_form: intake.yml
+    input: "Files under intake/<customer>/<date>/"
+    output: "INTK-#### row in intake/_index.md and converted evidence"
+    skills: [intake-conversion]
+    stage_status_flow:
+      - Received
+      - Registering
+      - Converting Evidence
+      - Evidence Review
+      - Questions Pending
+      - Accepted
+    validation: "Source path, conversion result, location references, SHA-256, and registry completeness"
+    gates: [intake-acceptance]
+    next_stage: requirement
+
+  - id: requirement
+    name: Requirement
+    order: 2
+    purpose: "Convert accepted evidence into atomic, testable, traceable requirements."
+    label: {name: requirement, color: "0E8A16", description: "Requirement intake and normalization"}
+    artifact_id_format: "INTK-%04d-REQ-%03d"
+    issue_form: requirement.yml
+    input: "Accepted INTK-#### and converted evidence"
+    output: "specs/intakes/INTK-####/requirements/INTK-####-REQ-###.md"
+    skills: [intake-traceability, atomic-requirement-authoring]
+    stage_status_flow:
+      - Handoff Draft
+      - Ready for Drafting
+      - Drafting
+      - Questions Pending
+      - Validating
+      - Requirement Review
+      - Changes Requested
+      - Approved
+    validation: "python scripts/validate_reqs.py"
+    gates: [requirement-review]
+    next_stage: feature
+
+  - id: feature
+    name: Feature
+    order: 3
+    purpose: "Refine approved requirements, add acceptance behavior, group them into features, and freeze a baseline."
+    label: {name: feature, color: "1D76DB", description: "Feature specification and refinement"}
+    artifact_id_format: "FEAT-%02d"
+    issue_form: feature.yml
+    input: "Approved INTK-####-REQ-###.md files"
+    output: "specs/<sequence>-<feature-slug>/spec.md"
+    skills: [requirement-refinement, open-question-handling, gherkin-authoring, feature-grouping, spec-compilation]
+    stage_status_flow:
+      - Handoff Draft
+      - Ready for Refinement
+      - Refining
+      - Questions Pending
+      - Grouping
+      - Compiling
+      - Validating
+      - Gate 2 Review
+      - Changes Requested
+      - Approved
+    validation: "python scripts/compile_specs.py --check && python scripts/validate_specs.py"
+    gates: [gate-2]
+    next_stage: design
+
+  - id: design
+    name: Design
+    order: 4
+    purpose: "Ground the implementation approach, make architecture decisions, decompose buildable components, and define user experience where applicable."
+    label: {name: design, color: "5319E7", description: "Solution design and decomposition"}
+    artifact_id_format: "DES-%02d"
+    issue_form: design.yml
+    input: "One approved feature workspace spec.md"
+    output: "The same feature workspace plan.md with typed components and technical decisions"
+    skills: [decision-axes, grounded-architecture, component-decomposition, observability-design, design-compilation, open-question-handling]
+    stage_status_flow:
+      - Handoff Draft
+      - Ready for Design
+      - Grounding
+      - Designing
+      - Questions Pending
+      - Compiling
+      - Validating
+      - Gate A Review
+      - Changes Requested
+      - Approved
+    validation: "python scripts/compile_design.py --check && python scripts/validate_design.py"
+    gates: [gate-a]
+    next_stage: development
+
+  - id: development
+    name: Development
+    order: 5
+    purpose: "Plan and implement independently assignable DEV items without changing the approved plan intent."
+    label: {name: development, color: "D93F0B", description: "Component implementation and build"}
+    artifact_id_format: "DEV-%04d"
+    issue_form: development.yml
+    input: "Approved plan.md components or one approved DEV-####.md"
+    output: "Generated tasks.md/DEV artifacts, then solution configuration, source, infrastructure, and build evidence"
+    skills: []
+    skills_note: "Resolved per component_type via taxonomy/component-types.yml component_type_skills, not a fixed list."
+    stage_status_flow:
+      - Handoff Draft
+      - Ready for Planning
+      - Planning
+      - Planning Review
+      - Ready for Build
+      - Building
+      - Self-Validation
+      - Unit Testing
+      - Code Review
+      - Changes Requested
+      - Ready for Test
+      - Completed
+    validation: "Component-specific build, lint, unit, schema, packaging, and conformance checks"
+    gates: [code-review]
+    next_stage: test
+
+  - id: test
+    name: Test
+    order: 6
+    purpose: "Verify implemented behavior and NFRs against approved requirements, feature scenarios, and design."
+    label: {name: test, color: "006B75", description: "Test planning, execution, and defect tracking"}
+    artifact_id_format: "TEST-%04d"
+    issue_form: test.yml
+    input: "Built components plus linked REQ, FEAT, DES, and UX artifacts"
+    output: "Test plan, execution results, defect links, and approval evidence"
+    skills: []
+    skills_note: "Reusable test skills are not yet published; see taxonomy/component-types.yml skill_phases."
+    stage_status_flow:
+      - Handoff Draft
+      - Test Planning
+      - Test Preparation
+      - Ready to Execute
+      - Executing
+      - Defects Found
+      - Blocked
+      - Retesting
+      - Test Review
+      - Approved
+    validation: "Unit, integration, UI, performance, security, and conformance suites as applicable"
+    gates: [test-approval]
+    next_stage: release
+
+  - id: release
+    name: Release
+    order: 7
+    purpose: "Package, approve, deploy, and verify an approved implementation release."
+    label: {name: release, color: "0052CC", description: "Release packaging, approval, and deployment"}
+    artifact_id_format: "REL-%04d"
+    issue_form: release.yml
+    input: "Approved build and test evidence"
+    output: "Deployment package, release record, deployment evidence, and rollback record"
+    skills: []
+    skills_note: "Reusable release/deployment skills are not yet published; see taxonomy/component-types.yml skill_phases."
+    stage_status_flow:
+      - Release Planning
+      - Package Preparation
+      - Package Validation
+      - Deployment Review
+      - Ready to Deploy
+      - Deploying
+      - Post-Deployment Verification
+      - Released
+    validation: "Package, dependency, environment, deployment, smoke, and rollback-readiness checks"
+    gates: [release-approval]
+    next_stage: operate
+
+  - id: operate
+    name: Operate
+    order: 8
+    purpose: "Monitor the released solution, investigate service issues, remediate, and feed approved changes back into the lifecycle."
+    label: {name: operate, color: "B60205", description: "Operations, monitoring, and service management"}
+    artifact_id_format: "OPS-%04d"
+    issue_form: operate.yml
+    input: "Released solution, telemetry, alerts, audit, and user feedback"
+    output: "Monitoring evidence, incident/problem records, remediation, and change intake"
+    skills: []
+    skills_note: "Reusable operations/support skills are not yet published; see taxonomy/component-types.yml skill_phases."
+    stage_status_flow:
+      - Monitoring
+      - Alerted
+      - Investigating
+      - Diagnosis Complete
+      - Remediating
+      - Verifying
+      - Service Review
+      - Resolved
+    validation: "Health, telemetry, audit, SLA, incident, and regression checks"
+    gates: [service-review]
+    next_stage: null # Operate hands off to a new Intake or change issue rather than a fixed next stage.
+
+# --- Shared Status -----------------------------------------------------------
+# One cross-lifecycle field layered over every stage's Stage Status.
+status:
+  field: Status
+  type: single_select
+  options:
+    - {name: Backlog, color: GRAY, description: "Identified but not scheduled"}
+    - {name: Ready, color: BLUE, description: "Required inputs and dependencies are available"}
+    - {name: In Progress, color: YELLOW, description: "Active agent or human work"}
+    - {name: Blocked, color: RED, description: "Work cannot proceed"}
+    - {name: In Review, color: ORANGE, description: "Awaiting validation or a human gate"}
+    - {name: Changes Requested, color: PINK, description: "Review found required rework"}
+    - {name: Approved, color: PURPLE, description: "The applicable human gate passed"}
+    - {name: Done, color: GREEN, description: "Output merged and downstream handoff created"}
+    - {name: Cancelled, color: GRAY, description: "Work intentionally stopped"}
+  transitions:
+    # Each entry lists the statuses reachable directly from `from`.
+    - {from: Backlog, to: [Ready, Cancelled]}
+    - {from: Ready, to: [In Progress, Cancelled]}
+    - {from: In Progress, to: [Blocked, In Review, Cancelled]}
+    - {from: Blocked, to: [In Progress, Cancelled]}
+    - {from: In Review, to: [Changes Requested, Approved, Cancelled]}
+    - {from: Changes Requested, to: [In Progress, Cancelled]}
+    - {from: Approved, to: [Done, Cancelled]}
+    - {from: Done, to: []}
+    - {from: Cancelled, to: []}
+  done_requires:
+    - "Authoritative output exists and is merged."
+    - "Deterministic validation passed."
+    - "Required human gate is approved."
+    - "Artifact and pull-request links are recorded."
+    - "The downstream issue or explicit handoff exists."
+
+# --- GitHub Project fields ---------------------------------------------------
+# The full canonical field set. `options` apply to single_select fields; the
+# `color` values are the fixed GitHub Projects v2 single-select palette
+# (GRAY, BLUE, GREEN, YELLOW, ORANGE, RED, PINK, PURPLE) and are what
+# scripts/Configure-D365ProjectTracking.ps1 sends through the GraphQL API.
+fields:
+  - name: Lifecycle Stage
+    type: single_select
+    description: "The active issue type / lifecycle stage."
+    options:
+      - {name: Intake, color: YELLOW}
+      - {name: Requirement, color: GREEN}
+      - {name: Feature, color: BLUE}
+      - {name: Design, color: PURPLE}
+      - {name: Development, color: ORANGE}
+      - {name: Test, color: PINK}
+      - {name: Release, color: BLUE}
+      - {name: Operate, color: RED}
+
+  - name: Status
+    type: single_select
+    description: "Shared cross-lifecycle workflow state. See the status section above."
+    options_ref: status.options
+
+  - name: Stage Status
+    type: text
+    description: "Exact type-specific value from the active stage's stage_status_flow. Issue forms constrain the allowed value with a dropdown."
+
+  - name: Artifact ID
+    type: text
+    description: "Primary lifecycle identifier, formatted per the stage's artifact_id_format."
+
+  - name: Parent Artifact
+    type: text
+    description: "Immediate upstream artifact ID."
+
+  - name: Customer / Workstream
+    type: text
+    description: "Customer, solution, or workstream grouping."
+
+  - name: Owner
+    type: assignee
+    description: "Accountable person."
+
+  - name: Priority
+    type: single_select
+    description: "MoSCoW-derived delivery priority."
+    options:
+      - {name: Critical, color: RED}
+      - {name: High, color: ORANGE}
+      - {name: Medium, color: YELLOW}
+      - {name: Low, color: GRAY}
+
+  - name: Planned Start
+    type: date
+    description: "Scheduled start."
+
+  - name: Planned Completion
+    type: date
+    description: "Expected completion or gate date."
+
+  - name: Actual Completion
+    type: date
+    description: "Date the Done contract was satisfied."
+
+  - name: Validation
+    type: single_select
+    description: "Result of the stage's deterministic validation."
+    options:
+      - {name: Not Run, color: GRAY}
+      - {name: Failed, color: RED}
+      - {name: Passed, color: GREEN}
+
+  - name: Gate
+    type: single_select
+    description: "Applicable human gate for the active stage."
+    options_ref: "gates[].name"
+
+  - name: Gate Status
+    type: single_select
+    description: "Progress of the applicable human gate."
+    options:
+      - {name: Not Ready, color: GRAY}
+      - {name: Ready, color: BLUE}
+      - {name: In Review, color: ORANGE}
+      - {name: Changes Requested, color: PINK}
+      - {name: Approved, color: PURPLE}
+      - {name: Not Applicable, color: GRAY}
+
+  - name: Health
+    type: single_select
+    description: "Schedule confidence, independent of workflow Status."
+    options:
+      - {name: On Track, color: GREEN}
+      - {name: At Risk, color: YELLOW}
+      - {name: Off Track, color: RED}
+
+  - name: Open Questions
+    type: number
+    description: "Current unresolved decision count."
+
+  - name: Blocked Reason
+    type: text
+    description: "Short actionable explanation, required whenever Status is Blocked."
+
+  - name: Planned Units
+    type: number
+    description: "Files, REQs, components, tests, or other measurable units planned."
+
+  - name: Completed Units
+    type: number
+    description: "Completed units using the same measure as Planned Units."
+
+  - name: Iteration
+    type: iteration
+    description: "Planned delivery interval."
+
+# --- Human gates --------------------------------------------------------------
+# Every gate referenced by a stage's `gates` list. Automation may prepare the
+# gate queue (Gate Status = Ready) but must never set Gate Status = Approved.
+gates:
+  - id: intake-acceptance
+    name: "Intake acceptance"
+    stage: intake
+    reviewer: "Accountable intake owner"
+  - id: requirement-review
+    name: "Requirement review"
+    stage: requirement
+    reviewer: "Business or requirement reviewer"
+  - id: gate-2
+    name: "Gate 2"
+    stage: feature
+    reviewer: "Customer and architect"
+  - id: gate-a
+    name: "Gate A"
+    stage: design
+    reviewer: "Architect"
+    applies_to: "Authoritative technical plan (plan.md)"
+  - id: code-review
+    name: "Code review"
+    stage: development
+    reviewer: "Code or configuration reviewer"
+  - id: test-approval
+    name: "Test approval"
+    stage: test
+    reviewer: "Test lead"
+  - id: release-approval
+    name: "Release approval"
+    stage: release
+    reviewer: "Release manager"
+  - id: service-review
+    name: "Service review"
+    stage: operate
+    reviewer: "Service owner"
+
+# --- Dashboards ---------------------------------------------------------------
+dashboards:
+  summary_metrics:
+    - {name: "Active lifecycle items", definition: "Items not Done or Cancelled"}
+    - {name: "On track", definition: "Active items with Health = On Track"}
+    - {name: "At risk", definition: "Active items with Health = At Risk"}
+    - {name: "Off track", definition: "Active items with Health = Off Track"}
+    - {name: Blocked, definition: "Items with Status = Blocked"}
+    - {name: "Gates awaiting review", definition: "Items with Gate Status = Ready or In Review"}
+    - {name: "Open questions", definition: "Sum of Open Questions"}
+    - {name: "Planned this iteration", definition: "Items assigned to the current iteration"}
+    - {name: "Completed this iteration", definition: "Current-iteration items with Status = Done"}
+    - {name: Overdue, definition: "Planned Completion is in the past and Status is not Done or Cancelled"}
+  views:
+    - id: lifecycle-portfolio
+      name: "Lifecycle Portfolio"
+      layout: table
+      filter: "Status is not Done and not Cancelled"
+      group: "Lifecycle Stage"
+      sort: "Planned Completion ascending, then Priority"
+      columns: [Title, "Artifact ID", "Lifecycle Stage", Status, "Stage Status", Owner, Health, "Planned Start", "Planned Completion", "Completed Units", "Planned Units", Validation, "Gate Status"]
+    - id: workflow-board
+      name: "Workflow Board"
+      layout: board
+      group_by: Status
+      filter: "Status is not Cancelled"
+      card_fields: ["Lifecycle Stage", "Artifact ID", "Stage Status", Owner, "Planned Completion", Health, Validation, "Gate Status"]
+    - id: timeline-milestones
+      name: "Timeline and Milestones"
+      layout: roadmap
+      date_start: "Planned Start"
+      date_end: "Planned Completion"
+      group: "Lifecycle Stage or Customer / Workstream"
+    - id: gates-approvals
+      name: "Gates and Approvals"
+      layout: board
+      filter: "Status = In Review or Gate Status = Ready"
+      group_by: Gate
+      card_fields: ["Artifact ID", "Lifecycle Stage", Owner, Validation, "Gate Status", "Open Questions", "Planned Completion"]
+    - id: risks-blockers
+      name: "Risks and Blockers"
+      layout: table
+      filter: "Status = Blocked or Health = At Risk or Health = Off Track or Open Questions > 0 or overdue"
+      sort: "Health severity, then Planned Completion ascending"
+      columns: [Title, "Lifecycle Stage", "Artifact ID", Status, "Stage Status", Health, Owner, "Blocked Reason", "Open Questions", "Planned Completion"]
+    - id: complete-traceability
+      name: "Complete Traceability"
+      layout: table
+      group: "Lifecycle Stage"
+      columns: ["Artifact ID", "Parent Artifact", Issue, "Lifecycle Stage", Status, Validation, "Gate Status", Owner, "Planned Completion"]
+  stage_views:
+    - name: "Stage Drill-down"
+      filter_field: "Lifecycle Stage"
+      columns: [Title, "Artifact ID", Status, "Stage Status", Owner, Health, "Planned Completion", Validation, "Gate Status", "Open Questions", "Planned Units", "Completed Units"]
+
+# --- Traceability ---------------------------------------------------------------
+traceability:
+  chain: [intake, requirement, feature, design, development, test, release, operate]
+  chain_description: >-
+    INTK-#### -> INTK-####-GRP-## -> INTK-####-REQ-### -> FEAT-## -> DES-##
+    -> DEV-#### -> test evidence -> release -> operations
+  layers:
+    - {layer: "Work hierarchy", mechanism: "GitHub parent/sub-issues and dependencies", purpose: "Shows ownership, decomposition, and blocking"}
+    - {layer: "Project metadata", mechanism: "Artifact ID and Parent Artifact fields", purpose: "Enables filtering and a single portfolio table"}
+    - {layer: "Artifact metadata", mechanism: "Front matter, registry IDs, and repository paths", purpose: "Provides deterministic specification traceability"}
+    - {layer: "Change review", mechanism: "Pull-request links", purpose: "Records proposed changes and review discussion"}
+    - {layer: "Approval audit", mechanism: "Commit permalinks and gate decision", purpose: "Identifies the exact approved revision"}
+    - {layer: Handoff, mechanism: "Downstream issue links", purpose: "Proves continuity into the next lifecycle stage"}
+  required_issue_links:
+    - "Repository-relative path for agents"
+    - "Clickable branch link for current human navigation"
+    - "Pull-request link for review"
+    - "Commit permalink after approval"
+
+# --- Automation rules ---------------------------------------------------------
+# Every automated rule must stay inside the automation boundary: it may
+# prepare, label, count, and link, but it must never approve a gate, close an
+# open question, or merge a lifecycle pull request.
+automation:
+  rules:
+    - id: project-auto-add
+      name: "Project auto-add"
+      description: "Add every issue carrying a lifecycle stage label to the connected Project."
+      trigger: "issue opened or labeled with a lifecycle stage label"
+      workflow_template: tracking-lifecycle.yml
+    - id: initial-stage-status
+      name: "Initialize stage and status"
+      description: "Set Lifecycle Stage from the issue's stage label and Status/Stage Status to their first workflow value when an issue is newly added to the Project."
+      trigger: "issue added to the Project"
+      workflow_template: tracking-lifecycle.yml
+    - id: validation-sync
+      name: "Validation synchronization"
+      description: "Reflect a definitive deterministic CI result (Passed/Failed) onto linked issues only when the validator applies to their lifecycle stage."
+      trigger: "trusted same-repository pull request validation workflow completed with success or failure"
+      workflow_template: tracking-lifecycle.yml
+    - id: measurable-counts
+      name: "Measurable counts"
+      description: "Update Planned Units/Completed Units (or stage-specific counts) from repository or artifact state."
+      trigger: "push to the default branch or workflow_dispatch"
+      workflow_template: tracking-lifecycle.yml
+    - id: overdue-detection
+      name: "Overdue detection"
+      description: "Flag items where Planned Completion is in the past and Status is not Done or Cancelled, for example by setting Health to Off Track."
+      trigger: "scheduled (daily)"
+      workflow_template: tracking-lifecycle.yml
+    - id: traceability-links
+      name: "Traceability links"
+      description: "Record Parent Artifact and downstream handoff issue links from issue body references."
+      trigger: "issue opened, edited, or closed"
+      workflow_template: tracking-lifecycle.yml
+    - id: cancelled-on-close
+      name: "Cancel issues closed as not planned"
+      description: "Set Status to Cancelled when a lifecycle issue is closed as not planned; completed closures remain unchanged until Done prerequisites are verified manually."
+      trigger: "issue closed"
+      workflow_template: tracking-lifecycle.yml
+    - id: merged-pr-handoff
+      name: "Merged pull-request handoff"
+      description: "After a trusted merged lifecycle pull request, create the next-stage issue in Backlog/Handoff Draft with permanent artifact links. A planning merge creates one Development execution issue per DEV artifact; a completed implementation merge creates the Test handoff."
+      trigger: "pull request merged on the default branch"
+      workflow_template: lifecycle-handoff.yml
+  manual_only:
+    - "Closing open questions without a recorded human decision"
+    - "Approving requirements, features, architecture, UX, tests, or releases"
+    - "Inferring a gate decision"
+    - "Moving an issue to Done without verifying every status.done_requires prerequisite"
+    - "Merging a lifecycle pull request"

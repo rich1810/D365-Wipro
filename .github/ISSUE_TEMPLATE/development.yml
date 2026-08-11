@@ -1,0 +1,148 @@
+name: Development Execution
+description: Implement exactly one approved DEV artifact.
+title: "Development: DEV-#### <component name>"
+labels: ["development"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Stage:** Development (lifecycle stage 5 of 8)
+
+        **Purpose:** Implement exactly one independently assignable DEV item
+        without changing the approved design intent.
+
+        **Input:** One approved `development/DEV-####.md`
+        **Output:** Solution configuration, unpacked source, code, infrastructure,
+        and build evidence
+        **Required skill:** resolved per `component_type` from
+        `taxonomy/component-types.yml` `component_type_skills` (for example
+        `dataverse-table`, `power-automate-flow`, `model-driven-ui`, or
+        `azure-infra`); this is not a fixed list
+        **Validation:** Component-specific build, lint, unit, schema, packaging,
+        and conformance checks
+        **Human gate:** Code review
+        **Next handoff:** Test issue linked to the built components and build PR
+
+  - type: input
+    id: dev-source
+    attributes:
+      label: DEV artifact
+      description: Permanent path and link to the approved DEV-#### being executed.
+      placeholder: "specs/001-email-servicing/development/DEV-0001.md (link)"
+    validations:
+      required: true
+
+  - type: input
+    id: component-type
+    attributes:
+      label: Component type
+      description: The exact component_type value from taxonomy/component-types.yml (for example schema_table, flow_cloud, uiux_form).
+    validations:
+      required: true
+
+  - type: textarea
+    id: required-payload
+    attributes:
+      label: Required payload
+      description: The required fields for this component_type from component_type_payloads, copied from the design's sub-list.
+    validations:
+      required: true
+
+  - type: input
+    id: build-skill
+    attributes:
+      label: Build skill
+      description: The Craft build skill resolved for this component_type.
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation-target
+    attributes:
+      label: Implementation scope and authoring target
+      description: Copy the compiler-owned implementation_scope, target_roots, and normalized authoring_target from the approved DEV artifact. Do not replace them with deployment environments.
+    validations:
+      required: true
+
+  - type: input
+    id: execution-host
+    attributes:
+      label: Execution host
+      description: Copy the compiler-owned execution_host from the approved DEV artifact. Dataverse-bound work must say "Local interactive (Copilot CLI or VS Code)" and must not be delegated to GitHub Copilot cloud coding agent.
+      placeholder: "Local interactive (Copilot CLI or VS Code)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Other components, connections, or configuration this build depends on.
+    validations:
+      required: false
+
+  - type: input
+    id: planned-completion
+    attributes:
+      label: Planned completion
+      description: Expected date for code review.
+      placeholder: "yyyy-mm-dd"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: stage-status
+    attributes:
+      label: Stage Status
+      description: Exact current position in the Development workflow (matches templates/tracking/project-definition.yml stages[development].stage_status_flow).
+      options:
+        - Handoff Draft
+        - Ready for Planning
+        - Planning
+        - Planning Review
+        - Ready for Build
+        - Building
+        - Self-Validation
+        - Unit Testing
+        - Code Review
+        - Changes Requested
+        - Ready for Test
+        - Completed
+      default: 4
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Gate
+      description: The human gate that applies to this stage.
+      options:
+        - Code review
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: downstream-handoff
+    attributes:
+      label: Downstream handoff
+      description: Link to the Test issue and build pull request, or state that they are not yet created.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: completion-checklist
+    attributes:
+      label: Completion checklist
+      options:
+        - label: The approved spec, plan, and DEV intent are unchanged; only this DEV scope was implemented.
+          required: false
+        - label: Component-specific build, lint, unit, schema, packaging, and conformance checks pass.
+          required: false
+        - label: A pull request is open for code review and is not merged by the agent.
+          required: false
+        - label: Code review gate is approved and recorded on this issue.
+          required: false
+        - label: The downstream Test issue exists and is linked above.
+          required: false

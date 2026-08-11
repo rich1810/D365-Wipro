@@ -1,0 +1,179 @@
+name: "Tracking lifecycle automation"
+
+# Automates the automation-boundary-safe rules from
+# .d365/tracking/project-definition.yml `automation.rules`: Project auto-add,
+# initial Lifecycle Stage/Status/Stage Status, validation synchronization,
+# measurable counts, overdue detection, traceability links, and marking
+# issues closed as not planned as Cancelled. It never approves a gate, moves
+# an issue to Done, closes an open
+# question, or merges a pull request; every human gate stays manual.
+#
+# Requires repository configuration (see docs/04 - Configure Project Tracking.md):
+#   Variables: D365_PROJECT_OWNER, D365_PROJECT_NUMBER
+#   Secret:    D365_PROJECT_TOKEN - a personal access token with the 'project'
+#              and 'repo' scopes. The default GITHUB_TOKEN cannot read or
+#              write user/organization Projects (v2); this is a GitHub
+#              platform limitation, not a bug in this workflow.
+#
+# Until D365_PROJECT_OWNER and D365_PROJECT_NUMBER are set, every job below
+# exits early with a notice and makes no changes. Once they are set, a missing
+# D365_PROJECT_TOKEN fails loudly instead of silently succeeding.
+
+on:
+  issues:
+    types: [opened, labeled, edited, closed, reopened]
+  workflow_run:
+    workflows: ["Validate requirements (T1)", "Validate features (T1)", "Validate design (T1)", "Validate development planning (T1)"]
+    types: [completed]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  is-configured:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        run: |
+          if [ -n "${{ vars.D365_PROJECT_OWNER }}" ] && [ -n "${{ vars.D365_PROJECT_NUMBER }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::D365_PROJECT_OWNER/D365_PROJECT_NUMBER repository variables are not set; tracking automation is skipped. See docs/04 - Configure Project Tracking.md."
+          fi
+
+  init-issue:
+    needs: is-configured
+    # Only an 'opened' event or a 'labeled' event adding one of the eight
+    # canonical lifecycle-stage labels (project-definition.yml `stages[].label.name`)
+    # runs this job. tracking_automation.py init-issue is itself idempotent
+    # and safe to call on any lifecycle-stage label (Status/Stage Status are
+    # only ever initialized, never reset), so this condition is a scheduling
+    # optimization, not a correctness requirement.
+    if: >-
+      needs.is-configured.outputs.configured == 'true' &&
+      github.event_name == 'issues' &&
+      (
+        github.event.action == 'opened' ||
+        (github.event.action == 'labeled' && contains(fromJSON('["intake","requirement","feature","design","development","test","release","operate"]'), github.event.label.name))
+      )
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.D365_PROJECT_TOKEN }}
+      D365_PROJECT_OWNER: ${{ vars.D365_PROJECT_OWNER }}
+      D365_PROJECT_NUMBER: ${{ vars.D365_PROJECT_NUMBER }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Require the Project token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::D365_PROJECT_TOKEN secret is required. See docs/04 - Configure Project Tracking.md."
+            exit 1
+          fi
+      - name: Add to Project and initialize fields
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          TRIGGERING_LABEL: ${{ github.event.label.name }}
+        run: >-
+          python scripts/tracking_automation.py init-issue
+          --issue-number "$ISSUE_NUMBER"
+          --stage-label "$TRIGGERING_LABEL"
+
+  validation-sync:
+    needs: is-configured
+    if: >-
+      needs.is-configured.outputs.configured == 'true' &&
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.D365_PROJECT_TOKEN }}
+      D365_PROJECT_OWNER: ${{ vars.D365_PROJECT_OWNER }}
+      D365_PROJECT_NUMBER: ${{ vars.D365_PROJECT_NUMBER }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Require the Project token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::D365_PROJECT_TOKEN secret is required. See docs/04 - Configure Project Tracking.md."
+            exit 1
+          fi
+      - name: Sync validation result to linked issues
+        env:
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: >-
+          python scripts/tracking_automation.py sync-validation
+          --workflow-name "$WORKFLOW_NAME"
+          --conclusion "$WORKFLOW_CONCLUSION"
+          --pr-number "$PR_NUMBER"
+
+  overdue-and-counts:
+    needs: is-configured
+    if: >-
+      needs.is-configured.outputs.configured == 'true' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.D365_PROJECT_TOKEN }}
+      D365_PROJECT_OWNER: ${{ vars.D365_PROJECT_OWNER }}
+      D365_PROJECT_NUMBER: ${{ vars.D365_PROJECT_NUMBER }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Require the Project token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::D365_PROJECT_TOKEN secret is required. See docs/04 - Configure Project Tracking.md."
+            exit 1
+          fi
+      - name: Flag overdue items
+        run: python scripts/tracking_automation.py detect-overdue
+      - name: Report measurable counts
+        run: python scripts/tracking_automation.py count-measurable
+
+  traceability-links:
+    needs: is-configured
+    if: >-
+      needs.is-configured.outputs.configured == 'true' &&
+      github.event_name == 'issues' &&
+      contains(fromJSON('["opened","edited","closed","reopened"]'), github.event.action)
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.D365_PROJECT_TOKEN }}
+      D365_PROJECT_OWNER: ${{ vars.D365_PROJECT_OWNER }}
+      D365_PROJECT_NUMBER: ${{ vars.D365_PROJECT_NUMBER }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Require the Project token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::D365_PROJECT_TOKEN secret is required. See docs/04 - Configure Project Tracking.md."
+            exit 1
+          fi
+      - name: Record traceability links and closed-issue status
+        run: python scripts/tracking_automation.py link-traceability --issue-number ${{ github.event.issue.number }}

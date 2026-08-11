@@ -1,0 +1,56 @@
+name: "Validate development planning (T1)"
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-development-planning:
+    name: "Validate development planning"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml jsonschema
+      - id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -Eq '^(conventions\.yml|\.d365/(spec-kit/|authoring-targets\.(yml|schema\.json)|development-resources\.(yml|schema\.json))|scripts/(pipeline_common|compile_design|compile_tasks|validate_tasks|validate_development_environment|validate_development_resources)\.py|specs/_schema/|specs/_index/repository-context\.json|specs/[0-9]{3}-[^/]+/tasks\.md|specs/[0-9]{3}-[^/]+/development/DEV-[0-9]{4}\.md|\.specify/context/task-context\.json)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate authoring targets
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_authoring_targets.py
+      - name: Validate development resources
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_development_resources.py
+      - name: Check generated tasks and DEV artifacts
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/compile_tasks.py --check
+      - name: Validate tasks and DEV artifacts
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_tasks.py
+      - name: Check resolved execution-host and developer-preflight contracts
+        if: steps.scope.outputs.run == 'true'
+        run: python scripts/validate_development_environment.py --check-all --dry-run --authentication-policy reuse_if_valid
+      - name: Check always-prompt authentication gate
+        if: steps.scope.outputs.run == 'true'
+        shell: bash
+        run: |
+          set +e
+          python scripts/validate_development_environment.py --check-all --dry-run --authentication-policy always_prompt
+          code=$?
+          set -e
+          test "$code" -eq 0 -o "$code" -eq 2

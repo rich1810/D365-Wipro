@@ -1,0 +1,24 @@
+name: "Copilot Setup Steps"
+
+# Runs automatically when the Copilot coding agent provisions its ephemeral
+# cloud runner. Installs the MarkItDown MCP server so the agent can convert
+# born-digital documents (.docx/.xlsx/.pptx/.pdf) to Markdown (Layer A).
+on: workflow_dispatch
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install MarkItDown MCP
+        run: pip install markitdown-mcp
+
+      # Opt-in fallback for scanned / image-only / complex-table docs ONLY.
+      # Off by default. Uncomment and supply COPILOT_MCP_* Agents secrets when needed.
+      # - name: Install MarkItDown with Azure Document Intelligence fallback
+      #   run: pip install 'markitdown[az-doc-intel]'

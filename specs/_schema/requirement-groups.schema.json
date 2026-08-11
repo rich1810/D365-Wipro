@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/your-project/specs/_schema/requirement-groups.schema.json",
+  "title": "Intake requirement group registry",
+  "description": "Non-governing business capability/process navigation for one intake. Atomic REQ files remain authoritative and retain their own evidence provenance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "intake", "groups"],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "intake": {
+      "type": "string",
+      "pattern": "^INTK-[0-9]{4}$"
+    },
+    "groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "order", "name", "description", "evidence"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^INTK-[0-9]{4}-GRP-[0-9]{2}$",
+            "description": "Stable intake-scoped group identifier."
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Contiguous intake-local display order. It may change without changing the stable group id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Concise evidence-grounded business capability or process name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Evidence-grounded explanation of the navigation group without solution design."
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source_file", "location"],
+              "properties": {
+                "source_file": {
+                  "type": "string",
+                  "pattern": "^intake/.+"
+                },
+                "location": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
