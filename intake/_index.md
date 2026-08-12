@@ -1,4 +1,4 @@
-# Intake Registry
+﻿# Intake Registry
 
 Every intake batch gets a stable **`INTK-####`** id, assigned by the intake agent
 (Phase 1) when it processes an intake issue. This id makes every downstream artifact
@@ -15,3 +15,4 @@ different submitters — never collide.
 
 | INTK | Folder | Intake issue | Date | Submitter | REQ range | Status |
 |------|--------|--------------|------|-----------|-----------|--------|
+| INTK-0001 | specs/intakes/INTK-0001 | #2 | 2026-08-11 | rich1810 | INTK-0001-REQ-001 | Evidence Review |
